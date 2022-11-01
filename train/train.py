@@ -24,10 +24,10 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
 
     # set nets
     D = networks['D']
-    G = networks['G'] if not args.distributed else networks['G'].module
-    C = networks['C'] if not args.distributed else networks['C'].module
-    G_EMA = networks['G_EMA'] if not args.distributed else networks['G_EMA'].module
-    C_EMA = networks['C_EMA'] if not args.distributed else networks['C_EMA'].module
+    G = networks['G'].module
+    C = networks['C'].module
+    G_EMA = networks['G_EMA'].module
+    C_EMA = networks['C_EMA'].module
     # set opts
     d_opt = opts['D']
     g_opt = opts['G']
@@ -41,7 +41,6 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
 
     logger = additional['logger']
 
-
     # summary writer
     train_it = iter(data_loader)
 
@@ -50,12 +49,11 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
     for i in t_train:
         try:
             imgs, y_org = next(train_it)
-        except:
+        except BaseException:
             train_it = iter(data_loader)
             imgs, y_org = next(train_it)
 
         x_org = imgs
-
 
         x_ref_idx = torch.randperm(x_org.size(0))
 
@@ -97,8 +95,8 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
         d_adv_real.backward(retain_graph=True)
         d_gp.backward()
         d_adv_fake.backward()
-        if args.distributed:
-            average_gradients(D)
+        # if args.distributed:
+        #     average_gradients(D)
         d_opt.step()
 
         # Train G
@@ -122,21 +120,21 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
         c_x_fake, _, _ = G.cnt_encoder(x_fake)
         g_conrec = calc_recon_loss(c_x_fake, c_src)
 
-        g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec +args.w_rec * g_conrec + args.w_off * offset_loss
- 
+        g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + \
+            args.w_rec * g_conrec + args.w_off * offset_loss
+
         g_opt.zero_grad()
         c_opt.zero_grad()
         g_loss.backward()
-        if args.distributed:
-            average_gradients(G)
-            average_gradients(C)
+        # if args.distributed:
+        #     average_gradients(G)
+        #     average_gradients(C)
         c_opt.step()
         g_opt.step()
 
         ##################
         # END Train GANs #
         ##################
-
 
         if epoch >= args.ema_start:
             training_mode = training_mode + "_EMA"
@@ -169,11 +167,15 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
                 add_logs(args, logger, 'G/IMGREC', g_imgrecs.avg, summary_step)
                 add_logs(args, logger, 'G/conrec', g_rec.avg, summary_step)
 
-                add_logs(args, logger, 'C/OFFSET', moco_losses.avg, summary_step)
+                add_logs(
+                    args,
+                    logger,
+                    'C/OFFSET',
+                    moco_losses.avg,
+                    summary_step)
 
-                print('Epoch: [{}/{}] [{}/{}] MODE[{}] Avg Loss: D[{d_losses.avg:.2f}] G[{g_losses.avg:.2f}] '.format(epoch + 1, args.epochs, i+1, args.iters,
-                                                        training_mode, d_losses=d_losses, g_losses=g_losses))
+                print('Epoch: [{}/{}] [{}/{}] MODE[{}] Avg Loss: D[{d_losses.avg:.2f}] G[{g_losses.avg:.2f}] '.format(
+                    epoch + 1, args.epochs, i + 1, args.iters, training_mode, d_losses=d_losses, g_losses=g_losses))
 
     copy_norm_params(G_EMA, G)
     copy_norm_params(C_EMA, C)
-
