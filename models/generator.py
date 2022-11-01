@@ -1,3 +1,4 @@
+from modules import modulated_deform_conv
 from torch import nn
 import torch
 import torch.nn.functional as F
@@ -8,19 +9,25 @@ import numpy as np
 
 try:
     from models.blocks import LinearBlock, Conv2dBlock, ResBlocks
-except:
+except BaseException:
     from blocks import LinearBlock, Conv2dBlock, ResBlocks
 
 import sys
 sys.path.append('..')
-from modules import modulated_deform_conv  
 
-class Generator(nn.Module):   
-    def __init__(self, img_size=80, sty_dim=64, n_res=2, use_sn=False):
+
+class Generator(nn.Module):
+    def __init__(
+            self,
+            img_size=80,
+            sty_dim=64,
+            n_res=2,
+            use_sn=False,
+            device='cpu'):
         super(Generator, self).__init__()
         print("Init Generator")
 
-        self.nf = 64 
+        self.nf = 64
         self.nf_mlp = 256
 
         self.decoder_norm = 'adain'
@@ -34,9 +41,26 @@ class Generator(nn.Module):
         n_downs = 2
         nf_dec = 256
 
-        self.cnt_encoder = ContentEncoder(self.nf, n_downs, n_res, 'in', 'relu', 'reflect')
-        self.decoder = Decoder(nf_dec, sty_dim, n_downs, n_res, self.decoder_norm, self.decoder_norm, 'relu', 'reflect', use_sn=use_sn)
-        self.mlp = MLP(sty_dim, self.adaptive_param_getter(self.decoder), self.nf_mlp, 3, 'none', 'relu')
+        self.cnt_encoder = ContentEncoder(
+            self.nf, n_downs, n_res, 'in', 'relu', 'reflect')
+        self.decoder = Decoder(
+            nf_dec,
+            sty_dim,
+            n_downs,
+            n_res,
+            self.decoder_norm,
+            self.decoder_norm,
+            'relu',
+            'reflect',
+            use_sn=use_sn)
+        self.mlp = MLP(
+            sty_dim,
+            self.adaptive_param_getter(
+                self.decoder),
+            self.nf_mlp,
+            3,
+            'none',
+            'relu')
 
         self.apply(weights_init('kaiming'))
 
@@ -54,67 +78,151 @@ class Generator(nn.Module):
     def _initialize_weights(self, mode='fan_in'):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode=mode, nonlinearity='relu')
+                nn.init.kaiming_normal_(
+                    m.weight, mode=mode, nonlinearity='relu')
                 if m.bias is not None:
                     m.bias.data.zero_()
 
 
 class Decoder(nn.Module):
-    def __init__(self, nf_dec, sty_dim, n_downs, n_res, res_norm, dec_norm, act, pad, use_sn=False):
+    def __init__(
+            self,
+            nf_dec,
+            sty_dim,
+            n_downs,
+            n_res,
+            res_norm,
+            dec_norm,
+            act,
+            pad,
+            use_sn=False,
+            device='cpu'):
         super(Decoder, self).__init__()
         print("Init Decoder")
 
         nf = nf_dec
         self.model = nn.ModuleList()
-        self.model.append(ResBlocks(n_res, nf, res_norm, act, pad, use_sn=use_sn))
+        self.model.append(
+            ResBlocks(
+                n_res,
+                nf,
+                res_norm,
+                act,
+                pad,
+                use_sn=use_sn))
 
         self.model.append(nn.Upsample(scale_factor=2))
-        self.model.append(Conv2dBlock(nf, nf//2, 5, 1, 2, norm=dec_norm, act=act, pad_type=pad, use_sn=use_sn))
+        self.model.append(
+            Conv2dBlock(
+                nf,
+                nf // 2,
+                5,
+                1,
+                2,
+                norm=dec_norm,
+                act=act,
+                pad_type=pad,
+                use_sn=use_sn))
         nf //= 2
 
         self.model.append(nn.Upsample(scale_factor=2))
-        self.model.append(Conv2dBlock(2*nf, nf//2, 5, 1, 2, norm=dec_norm, act=act, pad_type=pad, use_sn=use_sn))
+        self.model.append(
+            Conv2dBlock(
+                2 * nf,
+                nf // 2,
+                5,
+                1,
+                2,
+                norm=dec_norm,
+                act=act,
+                pad_type=pad,
+                use_sn=use_sn))
         nf //= 2
 
-        self.model.append(Conv2dBlock(2*nf, 3, 7, 1, 3, norm='none', act='tanh', pad_type=pad, use_sn=use_sn))
+        self.model.append(
+            Conv2dBlock(
+                2 * nf,
+                3,
+                7,
+                1,
+                3,
+                norm='none',
+                act='tanh',
+                pad_type=pad,
+                use_sn=use_sn))
         self.model = nn.Sequential(*self.model)
-        self.dcn = modulated_deform_conv.ModulatedDeformConvPack(64, 64, kernel_size=(3, 3), stride=1, padding=1, groups=1, deformable_groups=1, double=True).cuda()
-        self.dcn_2 = modulated_deform_conv.ModulatedDeformConvPack(128, 128, kernel_size=(3, 3), stride=1, padding=1, groups=1, deformable_groups=1, double=True).cuda()
+        if device == 'cpu':
+            self.dcn = modulated_deform_conv.ModulatedDeformConvPack(64, 64, kernel_size=(
+                3, 3), stride=1, padding=1, groups=1, deformable_groups=1, double=True)
+            self.dcn_2 = modulated_deform_conv.ModulatedDeformConvPack(128, 128, kernel_size=(
+                3, 3), stride=1, padding=1, groups=1, deformable_groups=1, double=True)
+        else:
+            self.dcn = modulated_deform_conv.ModulatedDeformConvPack(64, 64, kernel_size=(
+                3, 3), stride=1, padding=1, groups=1, deformable_groups=1, double=True).cuda()
+            self.dcn_2 = modulated_deform_conv.ModulatedDeformConvPack(128, 128, kernel_size=(
+                3, 3), stride=1, padding=1, groups=1, deformable_groups=1, double=True).cuda()
 
     def forward(self, x, skip1, skip2):
         output = x
         for i in range(len(self.model)):
             output = self.model[i](output)
 
-            if i == 2: 
-                deformable_concat = torch.cat((output,skip2), dim=1)
+            if i == 2:
+                deformable_concat = torch.cat((output, skip2), dim=1)
                 concat_pre, offset2 = self.dcn_2(deformable_concat, skip2)
-                output = torch.cat((concat_pre,output), dim=1)
+                output = torch.cat((concat_pre, output), dim=1)
 
             if i == 4:
-                deformable_concat = torch.cat((output,skip1), dim=1)
+                deformable_concat = torch.cat((output, skip1), dim=1)
                 concat_pre, offset1 = self.dcn(deformable_concat, skip1)
-                output = torch.cat((concat_pre,output), dim=1)
-            
+                output = torch.cat((concat_pre, output), dim=1)
+
         offset_sum1 = torch.mean(torch.abs(offset1))
         offset_sum2 = torch.mean(torch.abs(offset2))
-        offset_sum = (offset_sum1+offset_sum2)/2
+        offset_sum = (offset_sum1 + offset_sum2) / 2
         return output, offset_sum
 
 
 class ContentEncoder(nn.Module):
-    def __init__(self, nf_cnt, n_downs, n_res, norm, act, pad, use_sn=False):
+    def __init__(
+            self,
+            nf_cnt,
+            n_downs,
+            n_res,
+            norm,
+            act,
+            pad,
+            use_sn=False,
+            device='cpu'):
         super(ContentEncoder, self).__init__()
         print("Init ContentEncoder")
 
         nf = nf_cnt
 
         self.model = nn.ModuleList()
-        self.model.append(ResBlocks(n_res, 256, norm=norm, act=act, pad_type=pad, use_sn=use_sn))
+        self.model.append(
+            ResBlocks(
+                n_res,
+                256,
+                norm=norm,
+                act=act,
+                pad_type=pad,
+                use_sn=use_sn))
         self.model = nn.Sequential(*self.model)
-        self.dcn1 = modulated_deform_conv.ModulatedDeformConvPack(3, 64, kernel_size=(7, 7), stride=1, padding=3, groups=1, deformable_groups=1).cuda()
-        self.dcn2 = modulated_deform_conv.ModulatedDeformConvPack(64, 128, kernel_size=(4, 4), stride=2, padding=1, groups=1, deformable_groups=1).cuda()
-        self.dcn3 = modulated_deform_conv.ModulatedDeformConvPack(128, 256, kernel_size=(4, 4), stride=2, padding=1, groups=1, deformable_groups=1).cuda()
+        if device == 'cpu':
+            self.dcn1 = modulated_deform_conv.ModulatedDeformConvPack(
+                3, 64, kernel_size=(7, 7), stride=1, padding=3, groups=1, deformable_groups=1)
+            self.dcn2 = modulated_deform_conv.ModulatedDeformConvPack(
+                64, 128, kernel_size=(4, 4), stride=2, padding=1, groups=1, deformable_groups=1)
+            self.dcn3 = modulated_deform_conv.ModulatedDeformConvPack(
+                128, 256, kernel_size=(4, 4), stride=2, padding=1, groups=1, deformable_groups=1)
+        else:
+            self.dcn1 = modulated_deform_conv.ModulatedDeformConvPack(3, 64, kernel_size=(
+                7, 7), stride=1, padding=3, groups=1, deformable_groups=1).cuda()
+            self.dcn2 = modulated_deform_conv.ModulatedDeformConvPack(64, 128, kernel_size=(
+                4, 4), stride=2, padding=1, groups=1, deformable_groups=1).cuda()
+            self.dcn3 = modulated_deform_conv.ModulatedDeformConvPack(128, 256, kernel_size=(
+                4, 4), stride=2, padding=1, groups=1, deformable_groups=1).cuda()
         self.IN1 = nn.InstanceNorm2d(64)
         self.IN2 = nn.InstanceNorm2d(128)
         self.IN3 = nn.InstanceNorm2d(256)
@@ -125,7 +233,7 @@ class ContentEncoder(nn.Module):
         x = self.IN1(x)
         x = self.activation(x)
         skip1 = x
-        
+
         x, _ = self.dcn2(x, x)
         x = self.IN2(x)
         x = self.activation(x)
@@ -137,15 +245,42 @@ class ContentEncoder(nn.Module):
         x = self.model(x)
         return x, skip1, skip2
 
+
 class MLP(nn.Module):
-    def __init__(self, nf_in, nf_out, nf_mlp, num_blocks, norm, act, use_sn=False):
+    def __init__(
+            self,
+            nf_in,
+            nf_out,
+            nf_mlp,
+            num_blocks,
+            norm,
+            act,
+            use_sn=False):
         super(MLP, self).__init__()
         self.model = nn.ModuleList()
         nf = nf_mlp
-        self.model.append(LinearBlock(nf_in, nf, norm=norm, act=act, use_sn=use_sn))
+        self.model.append(
+            LinearBlock(
+                nf_in,
+                nf,
+                norm=norm,
+                act=act,
+                use_sn=use_sn))
         for _ in range(num_blocks - 2):
-            self.model.append(LinearBlock(nf, nf, norm=norm, act=act, use_sn=use_sn))
-        self.model.append(LinearBlock(nf, nf_out, norm='none', act='none', use_sn=use_sn))
+            self.model.append(
+                LinearBlock(
+                    nf,
+                    nf,
+                    norm=norm,
+                    act=act,
+                    use_sn=use_sn))
+        self.model.append(
+            LinearBlock(
+                nf,
+                nf_out,
+                norm='none',
+                act='none',
+                use_sn=use_sn))
         self.model = nn.Sequential(*self.model)
 
     def forward(self, x):
@@ -179,11 +314,11 @@ def assign_adain_params(adain_params, model):
     for m in model.modules():
         if m.__class__.__name__ == "AdaIN2d":
             mean = adain_params[:, :m.num_features]
-            std = adain_params[:, m.num_features:2*m.num_features]
+            std = adain_params[:, m.num_features:2 * m.num_features]
             m.bias = mean.contiguous().view(-1)
             m.weight = std.contiguous().view(-1)
-            if adain_params.size(1) > 2*m.num_features:
-                adain_params = adain_params[:, 2*m.num_features:]
+            if adain_params.size(1) > 2 * m.num_features:
+                adain_params = adain_params[:, 2 * m.num_features:]
 
 
 def get_num_adain_params(model):
@@ -191,5 +326,5 @@ def get_num_adain_params(model):
     num_adain_params = 0
     for m in model.modules():
         if m.__class__.__name__ == "AdaIN2d":
-            num_adain_params += 2*m.num_features
+            num_adain_params += 2 * m.num_features
     return num_adain_params
