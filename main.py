@@ -200,13 +200,17 @@ def main():
 
 
 def main_worker(gpu, ngpus_per_node, args):
-    if len(args.gpu) == 1:
+    if args.gpu is None:
+        args.cpu = 'cpu'
+    elif len(args.gpu) == 1:
         args.gpu = 0
     else:
         args.gpu = gpu
 
     if args.gpu is not None:
         print("Use GPU: {} for training".format(args.gpu))
+    else:
+        print("Use CPU: {} for training".format(args.cpu))
 
     # # of GT-classes
     args.num_cls = args.output_k
@@ -303,7 +307,8 @@ def build_model(args):
             networks[name] = net.cuda(args.gpu)
     else:
         for name, net in networks.items():
-            networks[name] = torch.nn.DataParallel(net).cuda()
+            # networks[name] = torch.nn.DataParallel(net).cuda()
+            networks[name] = torch.nn.DataParallel(net)
 
     if 'C' in args.to_train:
         opts['C'] = torch.optim.Adam(
