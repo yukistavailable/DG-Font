@@ -145,10 +145,10 @@ def main():
     args.fid_start = 1
 
     # Cuda Set-up
-    if args.gpu is not None:
-        os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-        warnings.warn('You have chosen a specific GPU. This will completely '
-                      'disable data parallelism.')
+    # if args.gpu is not None:
+    #     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+    #     warnings.warn('You have chosen a specific GPU. This will completely '
+    #                   'disable data parallelism.')
 
     ngpus_per_node = torch.cuda.device_count()
     args.ngpus_per_node = ngpus_per_node
@@ -201,16 +201,14 @@ def main():
 
 def main_worker(gpu, ngpus_per_node, args):
     if args.gpu is None:
-        args.cpu = 'cpu'
-    elif len(args.gpu) == 1:
-        args.gpu = 0
+        args.device = 'cpu'
     else:
-        args.gpu = gpu
+        args.device = 'cuda'
 
     if args.gpu is not None:
-        print("Use GPU: {} for training".format(args.gpu))
+        print("Use GPU: {} for training".format(args.device))
     else:
-        print("Use CPU: {} for training".format(args.cpu))
+        print("Use CPU: {} for training".format(args.device))
 
     # # of GT-classes
     args.num_cls = args.output_k
@@ -297,14 +295,20 @@ def build_model(args):
     if 'D' in args.to_train:
         networks['D'] = Discriminator(args.img_size, num_domains=args.output_k)
     if 'G' in args.to_train:
-        networks['G'] = Generator(args.img_size, args.sty_dim, use_sn=False)
+        networks['G'] = Generator(
+            args.img_size,
+            args.sty_dim,
+            use_sn=False,
+            device=args.device)
         networks['G_EMA'] = Generator(
-            args.img_size, args.sty_dim, use_sn=False)
+            args.img_size, args.sty_dim, use_sn=False, device=args.device)
 
-    if args.gpu is not None:
-        torch.cuda.set_device(args.gpu)
+    if args.device is not None:
+        # torch.cuda.set_device(args.device)
         for name, net in networks.items():
-            networks[name] = net.cuda(args.gpu)
+            # networks[name] = net.cuda(args.gpu)
+            # networks[name] = net.cuda(args.device)
+            networks[name] = net.to(args.device)
     else:
         for name, net in networks.items():
             # networks[name] = torch.nn.DataParallel(net).cuda()
