@@ -204,6 +204,7 @@ def main_worker(gpu, ngpus_per_node, args):
         args.device = 'cpu'
     else:
         args.device = 'cuda'
+    print(args.device)
 
     if args.gpu is not None:
         print("Use GPU: {} for training".format(args.device))
@@ -308,6 +309,7 @@ def build_model(args):
         for name, net in networks.items():
             # networks[name] = net.cuda(args.gpu)
             # networks[name] = net.cuda(args.device)
+            print(args.device)
             networks[name] = net.to(args.device)
     else:
         for name, net in networks.items():
