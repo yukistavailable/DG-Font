@@ -91,7 +91,7 @@ parser.add_argument(
     'It loads the latest .ckpt file specified in checkpoint.txt in GAN_20190101_101010')
 parser.add_argument('--validation', dest='validation', action='store_true',
                     help='Call for valiation only mode')
-parser.add_argument('--gpu', default='0', type=str,
+parser.add_argument('--gpu', default=None, type=str,
                     help='GPU id to use.')
 parser.add_argument(
     '--ddp',
