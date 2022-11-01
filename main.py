@@ -234,15 +234,12 @@ def main_worker(gpu, ngpus_per_node, args):
     train_loader, val_loader, train_sampler = get_loader(
         args, {'train': train_dataset, 'val': val_dataset})
 
-    # map the functions to execute - un / sup / semi-
-    trainFunc, validationFunc = map_exec_func(args)
-
     # print all the argument
     print_args(args)
 
     # All the test is done in the training - do not need to call
     if args.validation:
-        validationFunc(val_loader, networks, 999, args, {'logger': logger})
+        validateUN(val_loader, networks, 999, args, {'logger': logger})
         return
 
     # For saving the model
@@ -256,7 +253,7 @@ def main_worker(gpu, ngpus_per_node, args):
     record_txt.close()
 
     # Run
-    #validationFunc(val_loader, networks, 0, args, {'logger': logger, 'queue': queue})
+    #validateUN(val_loader, networks, 0, args, {'logger': logger, 'queue': queue})
 
     for epoch in range(args.start_epoch, args.epochs):
         print("START EPOCH[{}]".format(epoch + 1))
@@ -266,10 +263,10 @@ def main_worker(gpu, ngpus_per_node, args):
         if epoch == args.ema_start and 'GAN' in args.train_mode:
             networks['G_EMA'].load_state_dict(networks['G'].state_dict())
 
-        trainFunc(train_loader, networks, opts,
-                  epoch, args, {'logger': logger})
+        trainGAN(train_loader, networks, opts,
+                 epoch, args, {'logger': logger})
 
-        validationFunc(val_loader, networks, epoch, args, {'logger': logger})
+        validateUN(val_loader, networks, epoch, args, {'logger': logger})
 
 #################
 # Sub functions #
@@ -386,16 +383,6 @@ def get_loader(args, dataset):
         'TRAINSET': train_dataset['FULL']}
 
     return train_loader, val_loader, train_sampler
-
-
-def map_exec_func(args):
-    # if args.train_mode == 'GAN':
-    #     trainFunc = trainGAN
-    #     validationFunc = validateUN
-    trainFunc = trainGAN
-    validationFunc = validateUN
-
-    return trainFunc, validationFunc
 
 
 def save_model(args, epoch, networks, opts):
