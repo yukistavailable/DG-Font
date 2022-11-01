@@ -61,10 +61,15 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
 
         x_ref_idx = torch.randperm(x_org.size(0))
 
-        x_org = x_org.cuda(args.gpu)
+        # x_org = x_org.cuda(args.gpu)
+        #
+        # y_org = y_org.cuda(args.gpu)
+        # x_ref_idx = x_ref_idx.cuda(args.gpu)
 
-        y_org = y_org.cuda(args.gpu)
-        x_ref_idx = x_ref_idx.cuda(args.gpu)
+        x_org = x_org.to(args.device)
+
+        y_org = y_org.to(args.device)
+        x_ref_idx = x_ref_idx.to(args.device)
 
         x_ref = x_org.clone()
         x_ref = x_ref[x_ref_idx]
