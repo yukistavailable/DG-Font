@@ -24,10 +24,14 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
 
     # set nets
     D = networks['D']
-    G = networks['G'].module
-    C = networks['C'].module
-    G_EMA = networks['G_EMA'].module
-    C_EMA = networks['C_EMA'].module
+    # G = networks['G'].module
+    # C = networks['C'].module
+    # G_EMA = networks['G_EMA'].module
+    # C_EMA = networks['C_EMA'].module
+    G = networks['G']
+    C = networks['C']
+    G_EMA = networks['G_EMA']
+    C_EMA = networks['C_EMA']
     # set opts
     d_opt = opts['D']
     g_opt = opts['G']
