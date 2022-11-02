@@ -134,7 +134,7 @@ def main():
     # Default settings #
     ####################
     args = parser.parse_args()
-    assert args.val_num > args.val_batch
+    assert args.val_num >= args.val_batch
 
     print("PYTORCH VERSION", torch.__version__)
     args.data_dir = args.data_path
