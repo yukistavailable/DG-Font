@@ -272,7 +272,6 @@ def main_worker(gpu, ngpus_per_node, args):
 
         trainGAN(train_loader, networks, opts,
                  epoch, args, {'logger': logger})
-        print('\nfinish trainGAN')
 
         # validateUN(val_loader, networks, epoch, args, {'logger': logger})
 
