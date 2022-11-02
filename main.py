@@ -274,7 +274,7 @@ def main_worker(gpu, ngpus_per_node, args):
                  epoch, args, {'logger': logger})
         print('\nfinish trainGAN')
 
-        validateUN(val_loader, networks, epoch, args, {'logger': logger})
+        # validateUN(val_loader, networks, epoch, args, {'logger': logger})
 
         if (epoch + 1) % (args.check_point_step) == 0:
             save_model(args, epoch, networks, opts)
