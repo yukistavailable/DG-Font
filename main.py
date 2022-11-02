@@ -266,8 +266,6 @@ def main_worker(gpu, ngpus_per_node, args):
 
     for epoch in range(args.start_epoch, args.epochs):
         print("START EPOCH[{}]".format(epoch + 1))
-        if (epoch + 1) % (args.check_point_step) == 0:
-            save_model(args, epoch, networks, opts)
 
         if epoch == args.ema_start and 'GAN' in args.train_mode:
             networks['G_EMA'].load_state_dict(networks['G'].state_dict())
@@ -276,6 +274,12 @@ def main_worker(gpu, ngpus_per_node, args):
                  epoch, args, {'logger': logger})
 
         validateUN(val_loader, networks, epoch, args, {'logger': logger})
+
+        if (epoch + 1) % (args.check_point_step) == 0:
+            save_model(args, epoch, networks, opts)
+
+        print("FINISH EPOCH[{}]".format(epoch + 1))
+    print("FINISH !!!!!!!!!!!!!!!!1")
 
 #################
 # Sub functions #
