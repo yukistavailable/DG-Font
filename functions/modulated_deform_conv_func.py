@@ -60,17 +60,17 @@ class ModulatedDeformConvFunction(Function):
     def backward(ctx, grad_output):
         input, offset, mask, weight, bias = ctx.saved_tensors
         grad_input, grad_offset, grad_mask, grad_weight, grad_bias = \
-            DCN.modulated_deform_conv_backward(input, weight,
-                                               bias,
-                                               offset, mask,
-                                               grad_output,
-                                               ctx.kernel_size[0], ctx.kernel_size[1],
-                                               ctx.stride[0], ctx.stride[1],
-                                               ctx.padding[0], ctx.padding[1],
-                                               ctx.dilation[0], ctx.dilation[1],
-                                               ctx.groups,
-                                               ctx.deformable_groups,
-                                               ctx.im2col_step)
+            DCN.modulated_deform_conv2d_backward(input, weight,
+                                                 bias,
+                                                 offset, mask,
+                                                 grad_output,
+                                                 ctx.kernel_size[0], ctx.kernel_size[1],
+                                                 ctx.stride[0], ctx.stride[1],
+                                                 ctx.padding[0], ctx.padding[1],
+                                                 ctx.dilation[0], ctx.dilation[1],
+                                                 ctx.groups,
+                                                 ctx.deformable_groups,
+                                                 ctx.im2col_step)
 
         return grad_input, grad_offset, grad_mask, grad_weight, grad_bias,\
             None, None, None, None, None, None
