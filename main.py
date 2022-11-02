@@ -214,7 +214,7 @@ def main_worker(gpu, ngpus_per_node, args):
     args.num_cls = args.output_k
 
     # Classes to use
-    args.att_to_use = [i for i in range(0, 600)]
+    args.att_to_use = [i for i in range(0, args.num_cls)]
 
     # IIC statistics
     args.epoch_acc = []
