@@ -122,6 +122,11 @@ parser.add_argument(
     default=0.5,
     type=float,
     help='Coefficient of offset normalization. loss of G')
+parser.add_argument(
+    '--check_point_step',
+    default=20,
+    type=int,
+    help='check point step')
 
 
 def main():
@@ -261,7 +266,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     for epoch in range(args.start_epoch, args.epochs):
         print("START EPOCH[{}]".format(epoch + 1))
-        if (epoch + 1) % (args.epochs // 25) == 0:
+        if (epoch + 1) % (args.check_point_step) == 0:
             save_model(args, epoch, networks, opts)
 
         if epoch == args.ema_start and 'GAN' in args.train_mode:
