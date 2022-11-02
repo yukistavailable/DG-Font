@@ -57,22 +57,24 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
             train_it = iter(data_loader)
             imgs, y_org = next(train_it)
 
+        # imgs.shape is [batch_size, 3, img_size, img_size]
+        # y_org is [class_idx, class_idx, ..., class_idx] and the length is
+        # batch_size
+
         x_org = imgs
 
+        # [0, 1, 2, ..., batch_size]をランダムに入れ替えたもの
+        # [6, 2, 7, 4, 1, 3, 5, 0]
         x_ref_idx = torch.randperm(x_org.size(0))
 
-        # x_org = x_org.cuda(args.gpu)
-        #
-        # y_org = y_org.cuda(args.gpu)
-        # x_ref_idx = x_ref_idx.cuda(args.gpu)
-
         x_org = x_org.to(args.device)
-
         y_org = y_org.to(args.device)
         x_ref_idx = x_ref_idx.to(args.device)
 
         x_ref = x_org.clone()
         x_ref = x_ref[x_ref_idx]
+        # x_ref はx_orgをランダムに入れ替えたもの
+        # x_ref is characters with the target font
 
         training_mode = 'GAN'
 
@@ -82,12 +84,19 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
         with torch.no_grad():
             y_ref = y_org.clone()
             y_ref = y_ref[x_ref_idx]
+
+            # style
             s_ref = C.moco(x_ref)
+
+            # content
             c_src, skip1, skip2 = G.cnt_encoder(x_org)
+
             x_fake, _ = G.decode(c_src, s_ref, skip1, skip2)
 
         x_ref.requires_grad_()
 
+        # - x: images of shape (batch, 3, image_size, image_size).
+        # - y: domain indices of shape (batch).
         d_real_logit, _ = D(x_ref, y_ref)
         d_fake_logit, _ = D(x_fake.detach(), y_ref)
 

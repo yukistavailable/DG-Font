@@ -79,12 +79,26 @@ class DatasetFolder(data.Dataset):
         targets (list): The class_index value for each image in the dataset
     """
 
-    def __init__(self, root, loader, extensions, transform=None, target_transform=None):
+    def __init__(
+            self,
+            root,
+            loader,
+            extensions,
+            transform=None,
+            target_transform=None):
         classes, class_to_idx = self._find_classes(root)
+
+        # The type of samples: [(img_path, class_idx), (img_path,
+        # class_idx),...]
         samples = make_dataset(root, class_to_idx, extensions)
         if len(samples) == 0:
-            raise(RuntimeError("Found 0 files in subfolders of: " + root + "\n"
-                               "Supported extensions are: " + ",".join(extensions)))
+            raise(
+                RuntimeError(
+                    "Found 0 files in subfolders of: " +
+                    root +
+                    "\n"
+                    "Supported extensions are: " +
+                    ",".join(extensions)))
 
         self.root = root
         self.loader = loader
@@ -115,9 +129,12 @@ class DatasetFolder(data.Dataset):
             # Faster and available in Python 3.5 and above
             classes = [d.name for d in os.scandir(dir) if d.is_dir()]
         else:
-            classes = [d for d in os.listdir(dir) if os.path.isdir(os.path.join(dir, d))]
+            classes = [
+                d for d in os.listdir(dir) if os.path.isdir(
+                    os.path.join(
+                        dir, d))]
         classes.sort()
-        classes.sort(key= lambda x:int(x[3:]))
+        classes.sort(key=lambda x: int(x[3:]))
         class_to_idx = {classes[i]: i for i in range(len(classes))}
         return classes, class_to_idx
 
@@ -146,17 +163,31 @@ class DatasetFolder(data.Dataset):
         fmt_str += '    Number of datapoints: {}\n'.format(self.__len__())
         fmt_str += '    Root Location: {}\n'.format(self.root)
         tmp = '    Transforms (if any): '
-        fmt_str += '{0}{1}\n'.format(tmp, self.transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
+        fmt_str += '{0}{1}\n'.format(tmp,
+                                     self.transform.__repr__().replace('\n',
+                                                                       '\n' + ' ' * len(tmp)))
         tmp = '    Target Transforms (if any): '
-        fmt_str += '{0}{1}'.format(tmp, self.target_transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
+        fmt_str += '{0}{1}'.format(tmp,
+                                   self.target_transform.__repr__().replace('\n',
+                                                                            '\n' + ' ' * len(tmp)))
         return fmt_str
 
 
-IMG_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif', '.tiff', 'webp']
+IMG_EXTENSIONS = [
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.ppm',
+    '.bmp',
+    '.pgm',
+    '.tif',
+    '.tiff',
+    'webp']
 
 
 def pil_loader(path):
-    # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
+    # open path as file to avoid ResourceWarning
+    # (https://github.com/python-pillow/Pillow/issues/835)
     with open(path, 'rb') as f:
         img = Image.open(f)
         return img.convert('RGB')
@@ -182,13 +213,22 @@ def default_loader(path):
 class ImageFolerRemap(DatasetFolder):
     def __init__(self, root, transform=None, target_transform=None,
                  loader=default_loader, remap_table=None, with_idx=False):
-        super(ImageFolerRemap, self).__init__(root, loader, IMG_EXTENSIONS, transform=transform, target_transform=target_transform)
+        super(
+            ImageFolerRemap,
+            self).__init__(
+            root,
+            loader,
+            IMG_EXTENSIONS,
+            transform=transform,
+            target_transform=target_transform)
 
         self.imgs = self.samples
         self.class_table = remap_table
         self.with_idx = with_idx
 
     def __getitem__(self, index):
+        # The type of self.samples: [(img_path, class_idx), (img_path,
+        # class_idx),...]
         path, target = self.samples[index]
         sample = self.loader(path)
         if self.transform is not None:
@@ -198,17 +238,34 @@ class ImageFolerRemap(DatasetFolder):
         target = self.class_table[target]
         if self.with_idx:
             return sample, index, target
+
+        # The type of sample is PIL.Image
+        # The type of target is int
+        # target is the target font id
         return sample, target
 
 
 class CrossdomainFolder(data.Dataset):
-    def __init__(self, root, data_to_use=['photo', 'monet'], transform=None, loader=default_loader, extensions='jpg'):
+    def __init__(
+            self,
+            root,
+            data_to_use=[
+                'photo',
+                'monet'],
+            transform=None,
+            loader=default_loader,
+            extensions='jpg'):
         self.data_to_use = data_to_use
         classes, class_to_idx = self._find_classes(root)
         samples = make_dataset(root, class_to_idx, extensions)
         if len(samples) == 0:
-            raise(RuntimeError("Found 0 files in subfolders of: " + root + "\n"
-                               "Supported extensions are: " + ",".join(extensions)))
+            raise(
+                RuntimeError(
+                    "Found 0 files in subfolders of: " +
+                    root +
+                    "\n"
+                    "Supported extensions are: " +
+                    ",".join(extensions)))
 
         self.root = root
         self.loader = loader
@@ -236,9 +293,11 @@ class CrossdomainFolder(data.Dataset):
         """
         if sys.version_info >= (3, 5):
             # Faster and available in Python 3.5 and above
-            classes = [d.name for d in os.scandir(dir) if d.is_dir() and d.name in self.data_to_use]
+            classes = [d.name for d in os.scandir(
+                dir) if d.is_dir() and d.name in self.data_to_use]
         else:
-            classes = [d for d in os.listdir(dir) if os.path.isdir(os.path.join(dir, d)) and d in self.data_to_use]
+            classes = [d for d in os.listdir(dir) if os.path.isdir(
+                os.path.join(dir, d)) and d in self.data_to_use]
         classes.sort()
         class_to_idx = {classes[i]: i for i in range(len(classes))}
         return classes, class_to_idx
@@ -265,5 +324,7 @@ class CrossdomainFolder(data.Dataset):
         fmt_str += '    Number of datapoints: {}\n'.format(self.__len__())
         fmt_str += '    Root Location: {}\n'.format(self.root)
         tmp = '    Transforms (if any): '
-        fmt_str += '{0}{1}\n'.format(tmp, self.transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
+        fmt_str += '{0}{1}\n'.format(tmp,
+                                     self.transform.__repr__().replace('\n',
+                                                                       '\n' + ' ' * len(tmp)))
         return fmt_str

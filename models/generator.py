@@ -167,6 +167,7 @@ class Decoder(nn.Module):
         for i in range(len(self.model)):
             output = self.model[i](output)
 
+            # FDSC
             if i == 2:
                 deformable_concat = torch.cat((output, skip2), dim=1)
                 concat_pre, offset2 = self.dcn_2(deformable_concat, skip2)

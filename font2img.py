@@ -52,11 +52,16 @@ def draw_single_char(ch, font, canvas_size, x_offset, y_offset):
     return img
 
 
+_img = Image.new("RGB", (args.img_size, args.img_size), (255, 255, 255))
+white_space_hashes = [hash(_img.tobytes())]
+
+
 def draw_example(ch, src_font, canvas_size, x_offset, y_offset):
     src_img = draw_single_char(ch, src_font, canvas_size, x_offset, y_offset)
-    example_img = Image.new("RGB", (canvas_size, canvas_size), (255, 255, 255))
-    example_img.paste(src_img, (0, 0))
-    return example_img
+    dst_hash = hash(src_img.tobytes())
+    if dst_hash in white_space_hashes:
+        return None
+    return src_img
 
 
 data_dir = args.ttf_path
@@ -80,7 +85,8 @@ for (label, item) in enumerate(all_image_paths):
             args.img_size,
             (args.img_size - args.chara_size) / 2,
             (args.img_size - args.chara_size) / 2)
-        path_full = os.path.join(args.save_path, 'id_%d' % label)
-        if not os.path.exists(path_full):
-            os.mkdir(path_full)
-        img.save(os.path.join(path_full, "%04d.png" % (cnt)))
+        if img is not None:
+            path_full = os.path.join(args.save_path, 'id_%d' % label)
+            if not os.path.exists(path_full):
+                os.mkdir(path_full)
+            img.save(os.path.join(path_full, "%04d.png" % (cnt)))

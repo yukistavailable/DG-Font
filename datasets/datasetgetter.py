@@ -4,6 +4,7 @@ import os
 import torchvision.transforms as transforms
 from datasets.custom_dataset import ImageFolerRemap, CrossdomainFolder
 
+
 class Compose(object):
     def __init__(self, tf):
         self.tf = tf
@@ -22,12 +23,12 @@ def get_dataset(args):
     normalize = transforms.Normalize(mean=mean, std=std)
 
     transform = Compose([transforms.Resize((args.img_size, args.img_size)),
-                                   transforms.ToTensor(),
-                                   normalize])
+                         transforms.ToTensor(),
+                         normalize])
 
     transform_val = Compose([transforms.Resize((args.img_size, args.img_size)),
-                                       transforms.ToTensor(),
-                                       normalize])
+                             transforms.ToTensor(),
+                             normalize])
 
     class_to_use = args.att_to_use
 
@@ -42,11 +43,16 @@ def get_dataset(args):
 
     print("LABEL MAP:", remap_table)
 
-
     img_dir = args.data_dir
 
-    dataset = ImageFolerRemap(img_dir, transform=transform, remap_table=remap_table)
-    valdataset = ImageFolerRemap(img_dir, transform=transform_val, remap_table=remap_table)
+    dataset = ImageFolerRemap(
+        img_dir,
+        transform=transform,
+        remap_table=remap_table)
+    valdataset = ImageFolerRemap(
+        img_dir,
+        transform=transform_val,
+        remap_table=remap_table)
     # parse classes to use
     tot_targets = torch.tensor(dataset.targets)
 
@@ -75,11 +81,9 @@ def get_dataset(args):
 
     args.min_data = min_data
     args.max_data = max_data
-    print("MINIMUM DATA :", args.min_data)
-    print("MAXIMUM DATA :", args.max_data)
+    print("MINIMUM TRAIN DATA FONT :", args.min_data)
+    print("MAXIMUM TAIN DATA FONT :", args.max_data)
 
     train_dataset = {'TRAIN': train_dataset, 'FULL': dataset}
 
     return train_dataset, val_dataset
-
-
