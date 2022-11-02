@@ -49,6 +49,7 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
     train_it = iter(data_loader)
 
     t_train = trange(0, args.iters, initial=0, total=args.iters)
+    print(f't_train: {t_train}')
 
     for i in t_train:
         try:

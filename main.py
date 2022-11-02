@@ -272,14 +272,15 @@ def main_worker(gpu, ngpus_per_node, args):
 
         trainGAN(train_loader, networks, opts,
                  epoch, args, {'logger': logger})
+        print('\nfinish trainGAN')
 
         validateUN(val_loader, networks, epoch, args, {'logger': logger})
 
         if (epoch + 1) % (args.check_point_step) == 0:
             save_model(args, epoch, networks, opts)
 
-        print("FINISH EPOCH[{}]".format(epoch + 1))
-    print("FINISH !!!!!!!!!!!!!!!!1")
+        print("\nFINISH EPOCH[{}]".format(epoch + 1))
+    print("\nFINISH !!!!!!!!!!!!!!!!1")
 
 #################
 # Sub functions #
