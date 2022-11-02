@@ -4,6 +4,7 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.utils as vutils
+import os
 
 
 try:
@@ -68,25 +69,21 @@ def validateUN(data_loader, networks, epoch, args, additional=None):
                 1,
                 x_each_cls[0].size(1),
                 x_each_cls[0].size(2),
-                x_each_cls[0].size(3)).cuda(
-                args.gpu,
-                non_blocking=True)
+                x_each_cls[0].size(3)).to(args.device)
             for src_idx in range(len(args.att_to_use)):
                 x_src = x_each_cls[src_idx][:args.val_batch,
-                                            :, :, :].cuda(args.gpu, non_blocking=True)
+                                            :, :, :].to(args.device)
                 rnd_idx = torch.randperm(x_each_cls[src_idx].size(0))[
                     :args.val_batch]
-                x_src_rnd = x_each_cls[src_idx][rnd_idx].cuda(
-                    args.gpu, non_blocking=True)
+                x_src_rnd = x_each_cls[src_idx][rnd_idx].to(args.device)
                 for ref_idx in range(len(args.att_to_use)):
                     x_res_ema = torch.cat((ones, x_src), 0)
                     x_rnd_ema = torch.cat((ones, x_src_rnd), 0)
-                    x_ref = x_each_cls[ref_idx][:args.val_batch, :, :, :].cuda(
-                        args.gpu, non_blocking=True)
+                    x_ref = x_each_cls[ref_idx][:args.val_batch, :, :, :].to(
+                        args.device)
                     rnd_idx = torch.randperm(x_each_cls[ref_idx].size(0))[
                         :args.val_batch]
-                    x_ref_rnd = x_each_cls[ref_idx][rnd_idx].cuda(
-                        args.gpu, non_blocking=True)
+                    x_ref_rnd = x_each_cls[ref_idx][rnd_idx].to(args.device)
                     for sample_idx in range(args.val_batch):
                         x_ref_tmp = x_ref[sample_idx: sample_idx +
                                           1].repeat((args.val_batch, 1, 1, 1))
