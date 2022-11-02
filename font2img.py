@@ -30,7 +30,7 @@ parser.add_argument(
 parser.add_argument(
     '--chara_size',
     type=int,
-    default=80,
+    default=70,
     help='The size of generated characters')
 args = parser.parse_args()
 
@@ -46,7 +46,9 @@ print('Characters: ', characters)
 def draw_single_char(ch, font, canvas_size, x_offset, y_offset):
     img = Image.new("RGB", (canvas_size, canvas_size), (255, 255, 255))
     draw = ImageDraw.Draw(img)
-    draw.text((x_offset, y_offset), ch, (0, 0, 0), font=font)
+    # draw.text((x_offset, y_offset), ch, (0, 0, 0), font=font)
+    draw.text((canvas_size // 2, canvas_size // 2), ch,
+              (0, 0, 0), font=font, anchor='mm')
     return img
 
 
