@@ -82,6 +82,7 @@ for i in range(len(all_image_paths)):
 seq = list()
 
 for (label, item) in enumerate(all_image_paths):
+    label += args.start_font
     src_font = ImageFont.truetype(item, size=args.chara_size)
     for (cnt, chara) in enumerate(characters):
         img = draw_example(
