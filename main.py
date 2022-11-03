@@ -260,7 +260,7 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.infer:
         full_dataset = get_dataset_for_inference(args, args.img_paths)
         infered_images = infer(full_dataset, networks, args)
-        infered_images = transforms.ToPILImage(infered_images[0])
+        infered_images = transforms.ToPILImage()(infered_images[0])
         infered_images.save('sample.png')
         return
 
