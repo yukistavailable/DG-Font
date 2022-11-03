@@ -18,7 +18,7 @@ from models.guidingNet import GuidingNet
 
 from train.train import trainGAN
 
-from validation.validation import validateUN
+from validation.validation import validateUN, infer
 
 from tools.utils import *
 from datasets.datasetgetter import get_dataset, get_dataset_for_inference
@@ -131,6 +131,13 @@ def main():
         default=20,
         type=int,
         help='check point step')
+    parser.add_argument(
+        '--img_paths',
+        required=False,
+        nargs='*',
+        type=str,
+        help='Image Paths for inference')
+
     ####################
     # Default settings #
     ####################
@@ -139,6 +146,8 @@ def main():
 
     # NAND
     assert not (args.validation and args.infer)
+    if args.infer:
+        assert args.img_paths is not None
 
     print("PYTORCH VERSION", torch.__version__)
     args.data_dir = args.data_path
@@ -248,7 +257,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     if args.infer:
         full_dataset = get_dataset_for_inference(args, args.img_paths)
-        validateUN(full_dataset, networks, args)
+        infer(full_dataset, networks, args)
 
     # get dataset and data loader
     train_dataset, val_dataset = get_dataset(args)
