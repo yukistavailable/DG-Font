@@ -46,6 +46,7 @@ def infer(full_dataset, networks, args):
         result = None
         for imgs, _ in it:
             imgs.to(args.device)
+            C.to(args.device)
             print("=============================")
             print(args.device)
             print(type(imgs))
