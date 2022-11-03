@@ -23,7 +23,10 @@ class Generator(nn.Module):
             sty_dim=64,
             n_res=2,
             use_sn=False,
-            device='cpu'):
+            device='cpu',
+            output_ch=3,
+            input_ch=3,
+    ):
         super(Generator, self).__init__()
         print("Init Generator")
 
@@ -42,7 +45,13 @@ class Generator(nn.Module):
         nf_dec = 256
 
         self.cnt_encoder = ContentEncoder(
-            self.nf, n_downs, n_res, 'in', 'relu', 'reflect')
+            self.nf,
+            n_downs,
+            n_res,
+            'in',
+            'relu',
+            'reflect',
+            input_ch=input_ch)
         self.decoder = Decoder(
             nf_dec,
             sty_dim,
@@ -52,7 +61,9 @@ class Generator(nn.Module):
             self.decoder_norm,
             'relu',
             'reflect',
-            use_sn=use_sn)
+            use_sn=use_sn,
+            output_ch=output_ch
+        )
         self.mlp = MLP(
             sty_dim,
             self.adaptive_param_getter(
@@ -96,7 +107,9 @@ class Decoder(nn.Module):
             act,
             pad,
             use_sn=False,
-            device='cpu'):
+            device='cpu',
+            output_ch=3,
+    ):
         super(Decoder, self).__init__()
         print("Init Decoder")
 
@@ -142,7 +155,7 @@ class Decoder(nn.Module):
         self.model.append(
             Conv2dBlock(
                 2 * nf,
-                3,
+                output_ch,
                 7,
                 1,
                 3,
@@ -194,7 +207,9 @@ class ContentEncoder(nn.Module):
             act,
             pad,
             use_sn=False,
-            device='cpu'):
+            device='cpu',
+            input_ch=3,
+    ):
         super(ContentEncoder, self).__init__()
         print("Init ContentEncoder")
 
@@ -212,7 +227,8 @@ class ContentEncoder(nn.Module):
         self.model = nn.Sequential(*self.model)
         if device == 'cpu':
             self.dcn1 = modulated_deform_conv.ModulatedDeformConvPack(
-                3, 64, kernel_size=(7, 7), stride=1, padding=3, groups=1, deformable_groups=1)
+                input_ch, 64, kernel_size=(
+                    7, 7), stride=1, padding=3, groups=1, deformable_groups=1)
             self.dcn2 = modulated_deform_conv.ModulatedDeformConvPack(
                 64, 128, kernel_size=(4, 4), stride=2, padding=1, groups=1, deformable_groups=1)
             self.dcn3 = modulated_deform_conv.ModulatedDeformConvPack(

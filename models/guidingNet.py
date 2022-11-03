@@ -3,24 +3,118 @@ import torch.nn.functional as F
 
 try:
     from models.blocks import Conv2dBlock, FRN
-except:
+except BaseException:
     from blocks import Conv2dBlock, FRN
 
 
 cfg = {
-    'vgg11': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
-    'vgg13': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
-    'vgg16': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
-    'vgg19': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'],
-    'vgg19cut': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'N'],
+    'vgg11': [
+        64,
+        'M',
+        128,
+        'M',
+        256,
+        256,
+        'M',
+        512,
+        512,
+        'M',
+        512,
+        512,
+        'M'],
+    'vgg13': [
+        64,
+        64,
+        'M',
+        128,
+        128,
+        'M',
+        256,
+        256,
+        'M',
+        512,
+        512,
+        'M',
+        512,
+        512,
+        'M'],
+    'vgg16': [
+        64,
+        64,
+        'M',
+        128,
+        128,
+        'M',
+        256,
+        256,
+        256,
+        'M',
+        512,
+        512,
+        512,
+        'M',
+        512,
+        512,
+        512,
+        'M'],
+    'vgg19': [
+        64,
+        64,
+        'M',
+        128,
+        128,
+        'M',
+        256,
+        256,
+        256,
+        256,
+        'M',
+        512,
+        512,
+        512,
+        512,
+        'M',
+        512,
+        512,
+        512,
+        512,
+        'M'],
+    'vgg19cut': [
+        64,
+        64,
+        'M',
+        128,
+        128,
+        'M',
+        256,
+        256,
+        256,
+        256,
+        'M',
+        512,
+        512,
+        512,
+        512,
+        'M',
+        512,
+        512,
+        512,
+        512,
+        'N'],
 }
 
 
 class GuidingNet(nn.Module):
-    def __init__(self, img_size=64, output_k={'cont': 128, 'disc': 10}):
+    def __init__(
+            self,
+            img_size=64,
+            output_k={
+                'cont': 128,
+                'disc': 10},
+            input_ch=3):
         super(GuidingNet, self).__init__()
         # network layers setting
-        self.features = make_layers(cfg['vgg11'], True)
+        self.features = make_layers(cfg['vgg11'], True, input_ch=input_ch)
 
         self.disc = nn.Linear(512, output_k['disc'])
         self.cont = nn.Linear(512, output_k['cont'])
@@ -40,7 +134,8 @@ class GuidingNet(nn.Module):
     def _initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                nn.init.kaiming_normal_(
+                    m.weight, mode='fan_out', nonlinearity='relu')
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
@@ -65,9 +160,9 @@ class GuidingNet(nn.Module):
         return disc
 
 
-def make_layers(cfg, batch_norm=False):
+def make_layers(cfg, batch_norm=False, input_ch=3):
     layers = []
-    in_channels = 3
+    in_channels = input_ch
     for v in cfg:
         if v == 'M':
             layers += [nn.MaxPool2d(kernel_size=2, stride=2)]

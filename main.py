@@ -11,7 +11,7 @@ import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
-from torchvision import transforms
+from torchvision.transforms.functional import to_pil_image
 
 from models.generator import Generator as Generator
 from models.discriminator import Discriminator as Discriminator
@@ -67,6 +67,11 @@ def main():
         help='Batch size for validation. '
              'The result images are stored in the form of (val_batch, val_batch) grid.')
     parser.add_argument('--log_step', default=100, type=int)
+    parser.add_argument(
+        '--input_ch',
+        default=3,
+        type=int,
+        help='The number of channels of input images=. 1 means gray scale. 3 means RGB')
     parser.add_argument(
         '--sty_dim',
         default=128,
@@ -268,7 +273,7 @@ def main_worker(gpu, ngpus_per_node, args):
         print('START INFERING IMAGES')
         full_dataset = get_dataset_for_inference(args, args.img_paths)
         infered_images = infer(full_dataset, networks, args)
-        infered_images = transforms.ToPILImage()(infered_images[0].to('cpu'))
+        infered_images = to_pil_image(infered_images[0].to('cpu'))
         infered_images.save('sample.png')
         print('FINISH INFERING IMAGES')
         return
@@ -333,20 +338,30 @@ def build_model(args):
     if 'C' in args.to_train:
         networks['C'] = GuidingNet(
             args.img_size, {
-                'cont': args.sty_dim, 'disc': args.output_k})
+                'cont': args.sty_dim, 'disc': args.output_k}, input_ch=args.input_ch)
         networks['C_EMA'] = GuidingNet(
             args.img_size, {
-                'cont': args.sty_dim, 'disc': args.output_k})
+                'cont': args.sty_dim, 'disc': args.output_k}, input_ch=args.input_ch)
     if 'D' in args.to_train:
-        networks['D'] = Discriminator(args.img_size, num_domains=args.output_k)
+        networks['D'] = Discriminator(
+            args.img_size,
+            num_domains=args.output_k,
+            input_ch=args.input_ch)
     if 'G' in args.to_train:
         networks['G'] = Generator(
             args.img_size,
             args.sty_dim,
             use_sn=False,
-            device=args.device)
+            device=args.device,
+            input_ch=args.input_ch,
+            output_ch=args.input_ch)
         networks['G_EMA'] = Generator(
-            args.img_size, args.sty_dim, use_sn=False, device=args.device)
+            args.img_size,
+            args.sty_dim,
+            use_sn=False,
+            device=args.device,
+            input_ch=args.input_ch,
+            output_ch=args.input_ch)
 
     if args.device is not None:
         # torch.cuda.set_device(args.device)

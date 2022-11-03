@@ -8,21 +8,27 @@ import math
 
 try:
     from models.blocks import FRN, ActFirstResBlk
-except:
+except BaseException:
     from blocks import FRN, ActFirstResBlk
 
 
 class Discriminator(nn.Module):
     """Discriminator: (image x, domain y) -> (logit out)."""
-    def __init__(self, image_size=256, num_domains=2, max_conv_dim=1024):
+
+    def __init__(
+            self,
+            image_size=256,
+            num_domains=2,
+            max_conv_dim=1024,
+            input_ch=3):
         super(Discriminator, self).__init__()
         dim_in = 64 if image_size < 256 else 32
         blocks = []
-        blocks += [nn.Conv2d(3, dim_in, 3, 1, 1)]
+        blocks += [nn.Conv2d(input_ch, dim_in, 3, 1, 1)]
 
         repeat_num = int(np.log2(image_size)) - 2
         for _ in range(repeat_num):
-            dim_out = min(dim_in*2, max_conv_dim)
+            dim_out = min(dim_in * 2, max_conv_dim)
             blocks += [ActFirstResBlk(dim_in, dim_in, downsample=False)]
             blocks += [ActFirstResBlk(dim_in, dim_out, downsample=True)]
             dim_in = dim_out
@@ -45,7 +51,8 @@ class Discriminator(nn.Module):
         """
         out = self.main(x)
         feat = out
-        out = out.view(out.size(0), -1)                          # (batch, num_domains)
+        # (batch, num_domains)
+        out = out.view(out.size(0), -1)
         idx = torch.LongTensor(range(y.size(0))).to(y.device)
         out = out[idx, y]                                         # (batch)
         return out, feat
@@ -53,7 +60,8 @@ class Discriminator(nn.Module):
     def _initialize_weights(self, mode='fan_in'):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode=mode, nonlinearity='relu')
+                nn.init.kaiming_normal_(
+                    m.weight, mode=mode, nonlinearity='relu')
                 if m.bias is not None:
                     m.bias.data.zero_()
 
