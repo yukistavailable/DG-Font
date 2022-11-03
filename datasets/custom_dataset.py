@@ -185,29 +185,31 @@ IMG_EXTENSIONS = [
     'webp']
 
 
-def pil_loader(path):
+def pil_loader(path, input_ch=3):
     # open path as file to avoid ResourceWarning
     # (https://github.com/python-pillow/Pillow/issues/835)
     with open(path, 'rb') as f:
         img = Image.open(f)
+        if input_ch == 1:
+            return img
         return img.convert('RGB')
 
 
-def accimage_loader(path):
+def accimage_loader(path, input_ch=3):
     import accimage
     try:
         return accimage.Image(path)
     except IOError:
         # Potentially a decoding problem, fall back to PIL.Image
-        return pil_loader(path)
+        return pil_loader(path, input_ch)
 
 
-def default_loader(path):
+def default_loader(path, input_ch=3):
     from torchvision import get_image_backend
     if get_image_backend() == 'accimage':
-        return accimage_loader(path)
+        return accimage_loader(path, input_ch=3)
     else:
-        return pil_loader(path)
+        return pil_loader(path, input_ch)
 
 
 class DatasetImages(data.Dataset):
@@ -229,7 +231,9 @@ class DatasetImages(data.Dataset):
             self,
             img_paths,
             loader=default_loader,
-            transform=None,):
+            transform=None,
+            input_ch=3,
+    ):
 
         # The type of samples: [(img_path, class_idx), (img_path,
         # class_idx),...]
@@ -240,6 +244,7 @@ class DatasetImages(data.Dataset):
         self.samples = samples
 
         self.transform = transform
+        self.input_ch = input_ch
 
     def __getitem__(self, index):
         """
@@ -250,7 +255,7 @@ class DatasetImages(data.Dataset):
             tuple: (sample, target) where target is class_index of the target class.
         """
         path = self.samples[index]
-        sample = self.loader(path)
+        sample = self.loader(path, self.input_ch)
         if self.transform is not None:
             sample = self.transform(sample)
         img_name = path.split('/')[-1].replace('.JPEG', '')
@@ -275,8 +280,15 @@ class DatasetImages(data.Dataset):
 
 
 class ImageFolderRemap(DatasetFolder):
-    def __init__(self, root, transform=None, target_transform=None,
-                 loader=default_loader, remap_table=None, with_idx=False):
+    def __init__(
+            self,
+            root,
+            transform=None,
+            target_transform=None,
+            loader=default_loader,
+            remap_table=None,
+            with_idx=False,
+            input_ch=3):
         super(
             ImageFolderRemap,
             self).__init__(
@@ -289,12 +301,13 @@ class ImageFolderRemap(DatasetFolder):
         self.imgs = self.samples
         self.class_table = remap_table
         self.with_idx = with_idx
+        self.input_ch = input_ch
 
     def __getitem__(self, index):
         # The type of self.samples: [(img_path, class_idx), (img_path,
         # class_idx),...]
         path, target = self.samples[index]
-        sample = self.loader(path)
+        sample = self.loader(path, self.input_ch)
         if self.transform is not None:
             sample = self.transform(sample)
         if self.target_transform is not None:

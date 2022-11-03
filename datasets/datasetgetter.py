@@ -48,11 +48,15 @@ def get_dataset(args):
     dataset = ImageFolderRemap(
         img_dir,
         transform=transform,
-        remap_table=remap_table)
+        remap_table=remap_table,
+        input_ch=args.input_ch
+    )
     valdataset = ImageFolderRemap(
         img_dir,
         transform=transform_val,
-        remap_table=remap_table)
+        remap_table=remap_table,
+        input_ch=args.input_ch
+    )
     # parse classes to use
     tot_targets = torch.tensor(dataset.targets)
 
@@ -102,6 +106,8 @@ def get_dataset_for_inference(args, img_paths):
 
     dataset = DatasetImages(
         img_paths,
-        transform=transform)
+        transform=transform,
+        input_ch=args.input_ch
+    )
 
     return dataset
