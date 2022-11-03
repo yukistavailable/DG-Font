@@ -21,120 +21,124 @@ from train.train import trainGAN
 from validation.validation import validateUN
 
 from tools.utils import *
-from datasets.datasetgetter import get_dataset
+from datasets.datasetgetter import get_dataset, get_dataset_for_inference
 
 from tensorboardX import SummaryWriter
 
-# Configuration
-parser = argparse.ArgumentParser(description='PyTorch GAN Training')
-parser.add_argument(
-    '--data_path',
-    type=str,
-    default='../data',
-    help='Dataset directory. Please refer Dataset in README.md')
-parser.add_argument(
-    '--workers',
-    default=4,
-    type=int,
-    help='the number of workers of data loader')
-parser.add_argument(
-    '--model_name',
-    type=str,
-    default='GAN',
-    help='Prefix of logs and results folders. '
-    'ex) --model_name=ABC generates ABC_20191230-131145 in logs and results')
-parser.add_argument(
-    '--epochs',
-    default=250,
-    type=int,
-    help='Total number of epochs to run. Not actual epoch.')
-parser.add_argument(
-    '--iters',
-    default=1000,
-    type=int,
-    help='Total number of iterations per epoch')
-parser.add_argument('--batch_size', default=32, type=int,
-                    help='Batch size for training')
-parser.add_argument('--val_num', default=190, type=int,
-                    help='Number of test images for each style')
-parser.add_argument(
-    '--val_batch',
-    default=10,
-    type=int,
-    help='Batch size for validation. '
-    'The result images are stored in the form of (val_batch, val_batch) grid.')
-parser.add_argument('--log_step', default=100, type=int)
-parser.add_argument(
-    '--sty_dim',
-    default=128,
-    type=int,
-    help='The size of style vector')
-parser.add_argument('--output_k', default=400, type=int,
-                    help='Total number of classes to use')
-parser.add_argument(
-    '--img_size',
-    default=80,
-    type=int,
-    help='Input image size')
-parser.add_argument(
-    '--dims',
-    default=2048,
-    type=int,
-    help='Inception dims for FID')
-parser.add_argument(
-    '--load_model',
-    default=None,
-    type=str,
-    metavar='PATH',
-    help='path to latest checkpoint (default: None)'
-    'ex) --load_model GAN_20190101_101010'
-    'It loads the latest .ckpt file specified in checkpoint.txt in GAN_20190101_101010')
-parser.add_argument('--validation', dest='validation', action='store_true',
-                    help='Call for valiation only mode')
-parser.add_argument('--gpu', default=None, type=str,
-                    help='GPU id to use.')
-parser.add_argument(
-    '--ddp',
-    dest='ddp',
-    action='store_true',
-    help='Call if using DDP')
-parser.add_argument('--port', default='8993', type=str)
-parser.add_argument(
-    '--iid_mode',
-    default='iid+',
-    type=str,
-    choices=[
-        'iid',
-        'iid+'])
-parser.add_argument(
-    '--w_gp',
-    default=10.0,
-    type=float,
-    help='Coefficient of GP of D')
-parser.add_argument('--w_rec', default=0.1, type=float,
-                    help='Coefficient of Rec. loss of G')
-parser.add_argument('--w_adv', default=1.0, type=float,
-                    help='Coefficient of Adv. loss of G')
-parser.add_argument('--w_vec', default=0.01, type=float,
-                    help='Coefficient of Style vector rec. loss of G')
-parser.add_argument(
-    '--w_off',
-    default=0.5,
-    type=float,
-    help='Coefficient of offset normalization. loss of G')
-parser.add_argument(
-    '--check_point_step',
-    default=20,
-    type=int,
-    help='check point step')
-
 
 def main():
+    # Configuration
+    parser = argparse.ArgumentParser(description='PyTorch GAN Training')
+    parser.add_argument(
+        '--data_path',
+        type=str,
+        default='../data',
+        help='Dataset directory. Please refer Dataset in README.md')
+    parser.add_argument(
+        '--workers',
+        default=4,
+        type=int,
+        help='the number of workers of data loader')
+    parser.add_argument(
+        '--model_name',
+        type=str,
+        default='GAN',
+        help='Prefix of logs and results folders. '
+             'ex) --model_name=ABC generates ABC_20191230-131145 in logs and results')
+    parser.add_argument(
+        '--epochs',
+        default=250,
+        type=int,
+        help='Total number of epochs to run. Not actual epoch.')
+    parser.add_argument(
+        '--iters',
+        default=1000,
+        type=int,
+        help='Total number of iterations per epoch')
+    parser.add_argument('--batch_size', default=32, type=int,
+                        help='Batch size for training')
+    parser.add_argument('--val_num', default=190, type=int,
+                        help='Number of test images for each style')
+    parser.add_argument(
+        '--val_batch',
+        default=10,
+        type=int,
+        help='Batch size for validation. '
+             'The result images are stored in the form of (val_batch, val_batch) grid.')
+    parser.add_argument('--log_step', default=100, type=int)
+    parser.add_argument(
+        '--sty_dim',
+        default=128,
+        type=int,
+        help='The size of style vector')
+    parser.add_argument('--output_k', default=400, type=int,
+                        help='Total number of classes to use')
+    parser.add_argument(
+        '--img_size',
+        default=80,
+        type=int,
+        help='Input image size')
+    parser.add_argument(
+        '--dims',
+        default=2048,
+        type=int,
+        help='Inception dims for FID')
+    parser.add_argument(
+        '--load_model',
+        default=None,
+        type=str,
+        metavar='PATH',
+        help='path to latest checkpoint (default: None)'
+             'ex) --load_model GAN_20190101_101010'
+             'It loads the latest .ckpt file specified in checkpoint.txt in GAN_20190101_101010')
+    parser.add_argument('--validation', dest='validation', action='store_true',
+                        help='Call for valiation only mode')
+    parser.add_argument('--infer', action='store_true',
+                        help='Call for inference only mode')
+    parser.add_argument('--gpu', default=None, type=str,
+                        help='GPU id to use.')
+    parser.add_argument(
+        '--ddp',
+        dest='ddp',
+        action='store_true',
+        help='Call if using DDP')
+    parser.add_argument('--port', default='8993', type=str)
+    parser.add_argument(
+        '--iid_mode',
+        default='iid+',
+        type=str,
+        choices=[
+            'iid',
+            'iid+'])
+    parser.add_argument(
+        '--w_gp',
+        default=10.0,
+        type=float,
+        help='Coefficient of GP of D')
+    parser.add_argument('--w_rec', default=0.1, type=float,
+                        help='Coefficient of Rec. loss of G')
+    parser.add_argument('--w_adv', default=1.0, type=float,
+                        help='Coefficient of Adv. loss of G')
+    parser.add_argument('--w_vec', default=0.01, type=float,
+                        help='Coefficient of Style vector rec. loss of G')
+    parser.add_argument(
+        '--w_off',
+        default=0.5,
+        type=float,
+        help='Coefficient of offset normalization. loss of G')
+    parser.add_argument(
+        '--check_point_step',
+        default=20,
+        type=int,
+        help='check point step')
     ####################
     # Default settings #
     ####################
     args = parser.parse_args()
     assert args.val_num >= args.val_batch
+
+    # NAND
+    assert not (args.validation and args.infer)
 
     print("PYTORCH VERSION", torch.__version__)
     args.data_dir = args.data_path
@@ -158,6 +162,7 @@ def main():
     #                   'disable data parallelism.')
 
     ngpus_per_node = torch.cuda.device_count()
+
     args.ngpus_per_node = ngpus_per_node
 
     # Logs / Results
@@ -238,18 +243,24 @@ def main_worker(gpu, ngpus_per_node, args):
     load_model(args, networks, opts)
     cudnn.benchmark = True
 
-    # get dataset and data loader
-    train_dataset, val_dataset = get_dataset(args)
-    train_loader, val_loader, train_sampler = get_loader(
-        args, {'train': train_dataset, 'val': val_dataset})
-
     # print all the argument
     print_args(args)
 
+    if args.infer:
+        full_dataset = get_dataset_for_inference(args, args.img_paths)
+        validateUN(full_dataset, networks, args)
+
+    # get dataset and data loader
+    train_dataset, val_dataset = get_dataset(args)
+
     # All the test is done in the training - do not need to call
     if args.validation:
-        validateUN(val_loader, networks, 999, args, {'logger': logger})
+        full_dataset = train_dataset['FULL']
+        validateUN(full_dataset, networks, args, 999)
         return
+
+    train_loader, val_loader, train_sampler = get_loader(
+        args, {'train': train_dataset, 'val': val_dataset})
 
     # For saving the model
     record_txt = open(os.path.join(args.log_dir, "record.txt"), "a+")
@@ -262,7 +273,6 @@ def main_worker(gpu, ngpus_per_node, args):
     record_txt.close()
 
     # Run
-    #validateUN(val_loader, networks, 0, args, {'logger': logger, 'queue': queue})
 
     for epoch in range(args.start_epoch, args.epochs):
         print("START EPOCH[{}]".format(epoch + 1))
@@ -273,7 +283,8 @@ def main_worker(gpu, ngpus_per_node, args):
         trainGAN(train_loader, networks, opts,
                  epoch, args, {'logger': logger})
 
-        # validateUN(val_loader, networks, epoch, args, {'logger': logger})
+        # full_dataset = train_dataset['FULL']
+        # validateUN(full_dataset, networks, epoch, args, {'logger': logger})
 
         if (epoch + 1) % (args.check_point_step) == 0:
             save_model(args, epoch, networks, opts)

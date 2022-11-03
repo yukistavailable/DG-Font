@@ -2,7 +2,7 @@ import torch
 from torchvision.datasets import ImageFolder
 import os
 import torchvision.transforms as transforms
-from datasets.custom_dataset import ImageFolerRemap, CrossdomainFolder
+from datasets.custom_dataset import ImageFolderRemap, CrossdomainFolder, DatasetImages
 
 
 class Compose(object):
@@ -45,11 +45,11 @@ def get_dataset(args):
 
     img_dir = args.data_dir
 
-    dataset = ImageFolerRemap(
+    dataset = ImageFolderRemap(
         img_dir,
         transform=transform,
         remap_table=remap_table)
-    valdataset = ImageFolerRemap(
+    valdataset = ImageFolderRemap(
         img_dir,
         transform=transform_val,
         remap_table=remap_table)
@@ -87,3 +87,21 @@ def get_dataset(args):
     train_dataset = {'TRAIN': train_dataset, 'FULL': dataset}
 
     return train_dataset, val_dataset
+
+
+def get_dataset_for_inference(args, img_paths):
+
+    mean = [0.5, 0.5, 0.5]
+    std = [0.5, 0.5, 0.5]
+
+    normalize = transforms.Normalize(mean=mean, std=std)
+
+    transform = Compose([transforms.Resize((args.img_size, args.img_size)),
+                         transforms.ToTensor(),
+                         normalize])
+
+    dataset = DatasetImages(
+        img_paths,
+        transform=transform)
+
+    return dataset

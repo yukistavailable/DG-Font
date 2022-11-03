@@ -173,6 +173,70 @@ class DatasetFolder(data.Dataset):
         return fmt_str
 
 
+class DatasetImages(data.Dataset):
+    """
+    Args:
+        img_paths (list[string]): Image Paths
+        loader (callable): A function to load a sample given its path.
+        transform (callable, optional): A function/transform that takes in
+            a sample and returns a transformed version.
+            E.g, ``transforms.RandomCrop`` for images.
+        target_transform (callable, optional): A function/transform that takes
+            in the target and transforms it.
+
+     Attributes:
+        samples (list): List of (sample path) tuples
+    """
+
+    def __init__(
+            self,
+            img_paths,
+            loader,
+            transform=None,):
+
+        # The type of samples: [(img_path, class_idx), (img_path,
+        # class_idx),...]
+        samples = img_paths
+
+        self.loader = loader
+
+        self.samples = samples
+
+        self.transform = transform
+
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+
+        Returns:
+            tuple: (sample, target) where target is class_index of the target class.
+        """
+        path = self.samples[index]
+        sample = self.loader(path)
+        if self.transform is not None:
+            sample = self.transform(sample)
+        img_name = path.split('/')[-1].replace('.JPEG', '')
+        return sample, img_name
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __repr__(self):
+        fmt_str = 'Dataset ' + self.__class__.__name__ + '\n'
+        fmt_str += '    Number of datapoints: {}\n'.format(self.__len__())
+        fmt_str += '    Image paths: {}\n'.format(self.samples)
+        tmp = '    Transforms (if any): '
+        fmt_str += '{0}{1}\n'.format(tmp,
+                                     self.transform.__repr__().replace('\n',
+                                                                       '\n' + ' ' * len(tmp)))
+        tmp = '    Target Transforms (if any): '
+        fmt_str += '{0}{1}'.format(tmp,
+                                   self.target_transform.__repr__().replace('\n',
+                                                                            '\n' + ' ' * len(tmp)))
+        return fmt_str
+
+
 IMG_EXTENSIONS = [
     '.jpg',
     '.jpeg',
@@ -210,11 +274,11 @@ def default_loader(path):
         return pil_loader(path)
 
 
-class ImageFolerRemap(DatasetFolder):
+class ImageFolderRemap(DatasetFolder):
     def __init__(self, root, transform=None, target_transform=None,
                  loader=default_loader, remap_table=None, with_idx=False):
         super(
-            ImageFolerRemap,
+            ImageFolderRemap,
             self).__init__(
             root,
             loader,
@@ -257,6 +321,7 @@ class CrossdomainFolder(data.Dataset):
             extensions='jpg'):
         self.data_to_use = data_to_use
         classes, class_to_idx = self._find_classes(root)
+
         samples = make_dataset(root, class_to_idx, extensions)
         if len(samples) == 0:
             raise(

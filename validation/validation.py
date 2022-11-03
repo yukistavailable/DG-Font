@@ -4,6 +4,7 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.utils as vutils
+from torchvision import transforms
 import os
 
 
@@ -19,7 +20,43 @@ from scipy import linalg
 from tools.utils import *
 
 
-def validateUN(data_loader, networks, epoch, args, additional=None):
+def infer(full_dataset, networks, args):
+    # set nets
+    D = networks['D']
+    G = networks['G']
+    C = networks['C']
+    C_EMA = networks['C_EMA']
+    G_EMA = networks['G_EMA']
+    # switch to train mode
+    D.eval()
+    G.eval()
+    C.eval()
+    C_EMA.eval()
+    G_EMA.eval()
+
+    with torch.no_grad():
+        dl = torch.utils.data.DataLoader(
+            full_dataset,
+            batch_size=args.batch_size,
+            shuffle=False,
+            num_workers=0,
+            pin_memory=True,
+            drop_last=False)
+        it = iter(dl)
+        result = None
+        for imgs, _ in it:
+            styles = C.moco(imgs)
+
+            contents, skip1, skip2 = G.cnt_encoder(imgs)
+            x_fake, _ = G.decode(contents, styles, skip1, skip2)
+            if result is None:
+                result = x_fake.clone()
+            else:
+                result = torch.cat((result, x_fake), 0)
+    return result
+
+
+def validateUN(full_dataset, networks, args, epoch=999):
     # set nets
     D = networks['D']
     G = networks['G']
@@ -33,8 +70,7 @@ def validateUN(data_loader, networks, epoch, args, additional=None):
     C_EMA.eval()
     G_EMA.eval()
     # data loader
-    val_dataset = data_loader['TRAINSET']
-    val_loader = data_loader['VAL']
+    val_dataset = full_dataset
 
     x_each_cls = []
     with torch.no_grad():
