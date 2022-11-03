@@ -257,7 +257,8 @@ def main_worker(gpu, ngpus_per_node, args):
 
     if args.infer:
         full_dataset = get_dataset_for_inference(args, args.img_paths)
-        infer(full_dataset, networks, args)
+        infered_images = infer(full_dataset, networks, args)
+        return
 
     # get dataset and data loader
     train_dataset, val_dataset = get_dataset(args)
