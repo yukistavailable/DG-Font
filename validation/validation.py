@@ -47,6 +47,7 @@ def infer(full_dataset, networks, args):
         for imgs, _ in it:
             imgs.to(args.device)
             print("=============================")
+            print(args.device)
             print(type(imgs))
             print("=============================")
             styles = C.moco(imgs)
