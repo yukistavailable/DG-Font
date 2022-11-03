@@ -92,6 +92,13 @@ def main():
         help='path to latest checkpoint (default: None)'
              'ex) --load_model GAN_20190101_101010'
              'It loads the latest .ckpt file specified in checkpoint.txt in GAN_20190101_101010')
+    parser.add_argument(
+        '--check_point_path',
+        default=None,
+        type=str,
+        metavar='PATH',
+        help='path to checkpoint (default: None)'
+             'ex) --check_point_path model_3.ckpt')
     parser.add_argument('--validation', dest='validation', action='store_true',
                         help='Call for valiation only mode')
     parser.add_argument('--infer', action='store_true',
@@ -367,35 +374,39 @@ def build_model(args):
 
 
 def load_model(args, networks, opts):
-    if args.load_model is not None:
+    if args.check_point_path is not None:
+        load_file = args.check_point_path
+    elif args.load_model is not None:
         check_load = open(os.path.join(args.log_dir, "checkpoint.txt"), 'r')
         to_restore = check_load.readlines()[-1].strip()
         load_file = os.path.join(args.log_dir, to_restore)
-        if os.path.isfile(load_file):
-            print("=> loading checkpoint '{}'".format(load_file))
-            checkpoint = torch.load(load_file, map_location='cpu')
-            args.start_epoch = checkpoint['epoch']
-            for name, net in networks.items():
-                tmp_keys = next(
-                    iter(checkpoint[name + '_state_dict'].keys()))
-                if 'module' in tmp_keys:
-                    tmp_new_dict = OrderedDict()
-                    for key, val in checkpoint[name +
-                                               '_state_dict'].items():
-                        tmp_new_dict[key[7:]] = val
-                    net.load_state_dict(tmp_new_dict)
-                    networks[name] = net
-                else:
-                    net.load_state_dict(checkpoint[name + '_state_dict'])
-                    networks[name] = net
+    else:
+        print("=> no checkpoint found at '{}'".format(args.log_dir))
+        return
 
-            for name, opt in opts.items():
-                opt.load_state_dict(checkpoint[name.lower() + '_optimizer'])
-                opts[name] = opt
-            print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(load_file, checkpoint['epoch']))
-        else:
-            print("=> no checkpoint found at '{}'".format(args.log_dir))
+    if os.path.isfile(load_file):
+        print("=> loading checkpoint '{}'".format(load_file))
+        checkpoint = torch.load(load_file, map_location='cpu')
+        args.start_epoch = checkpoint['epoch']
+        for name, net in networks.items():
+            tmp_keys = next(
+                iter(checkpoint[name + '_state_dict'].keys()))
+            if 'module' in tmp_keys:
+                tmp_new_dict = OrderedDict()
+                for key, val in checkpoint[name +
+                                           '_state_dict'].items():
+                    tmp_new_dict[key[7:]] = val
+                net.load_state_dict(tmp_new_dict)
+                networks[name] = net
+            else:
+                net.load_state_dict(checkpoint[name + '_state_dict'])
+                networks[name] = net
+
+        for name, opt in opts.items():
+            opt.load_state_dict(checkpoint[name.lower() + '_optimizer'])
+            opts[name] = opt
+        print("=> loaded checkpoint '{}' (epoch {})"
+              .format(load_file, checkpoint['epoch']))
 
 
 def get_loader(args, dataset):
