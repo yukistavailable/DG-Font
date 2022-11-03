@@ -45,6 +45,7 @@ def infer(full_dataset, networks, args):
         it = iter(dl)
         result = None
         for imgs, _ in it:
+            imgs.to(args.device)
             styles = C.moco(imgs)
 
             contents, skip1, skip2 = G.cnt_encoder(imgs)
