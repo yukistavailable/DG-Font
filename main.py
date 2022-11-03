@@ -258,10 +258,12 @@ def main_worker(gpu, ngpus_per_node, args):
     print_args(args)
 
     if args.infer:
+        print('START INFERING IMAGES')
         full_dataset = get_dataset_for_inference(args, args.img_paths)
         infered_images = infer(full_dataset, networks, args)
         infered_images = transforms.ToPILImage()(infered_images[0].to('cpu'))
         infered_images.save('sample.png')
+        print('FINISH INFERING IMAGES')
         return
 
     # get dataset and data loader
