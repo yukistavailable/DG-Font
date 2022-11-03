@@ -173,6 +173,43 @@ class DatasetFolder(data.Dataset):
         return fmt_str
 
 
+IMG_EXTENSIONS = [
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.ppm',
+    '.bmp',
+    '.pgm',
+    '.tif',
+    '.tiff',
+    'webp']
+
+
+def pil_loader(path):
+    # open path as file to avoid ResourceWarning
+    # (https://github.com/python-pillow/Pillow/issues/835)
+    with open(path, 'rb') as f:
+        img = Image.open(f)
+        return img.convert('RGB')
+
+
+def accimage_loader(path):
+    import accimage
+    try:
+        return accimage.Image(path)
+    except IOError:
+        # Potentially a decoding problem, fall back to PIL.Image
+        return pil_loader(path)
+
+
+def default_loader(path):
+    from torchvision import get_image_backend
+    if get_image_backend() == 'accimage':
+        return accimage_loader(path)
+    else:
+        return pil_loader(path)
+
+
 class DatasetImages(data.Dataset):
     """
     Args:
@@ -191,7 +228,7 @@ class DatasetImages(data.Dataset):
     def __init__(
             self,
             img_paths,
-            loader,
+            loader=default_loader,
             transform=None,):
 
         # The type of samples: [(img_path, class_idx), (img_path,
@@ -235,43 +272,6 @@ class DatasetImages(data.Dataset):
                                    self.target_transform.__repr__().replace('\n',
                                                                             '\n' + ' ' * len(tmp)))
         return fmt_str
-
-
-IMG_EXTENSIONS = [
-    '.jpg',
-    '.jpeg',
-    '.png',
-    '.ppm',
-    '.bmp',
-    '.pgm',
-    '.tif',
-    '.tiff',
-    'webp']
-
-
-def pil_loader(path):
-    # open path as file to avoid ResourceWarning
-    # (https://github.com/python-pillow/Pillow/issues/835)
-    with open(path, 'rb') as f:
-        img = Image.open(f)
-        return img.convert('RGB')
-
-
-def accimage_loader(path):
-    import accimage
-    try:
-        return accimage.Image(path)
-    except IOError:
-        # Potentially a decoding problem, fall back to PIL.Image
-        return pil_loader(path)
-
-
-def default_loader(path):
-    from torchvision import get_image_backend
-    if get_image_backend() == 'accimage':
-        return accimage_loader(path)
-    else:
-        return pil_loader(path)
 
 
 class ImageFolderRemap(DatasetFolder):

@@ -71,7 +71,7 @@ def main():
         default=128,
         type=int,
         help='The size of style vector')
-    parser.add_argument('--output_k', default=400, type=int,
+    parser.add_argument('--output_k', default=10, type=int,
                         help='Total number of classes to use')
     parser.add_argument(
         '--img_size',
