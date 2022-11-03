@@ -11,6 +11,7 @@ import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
+from torchvision import transforms
 
 from models.generator import Generator as Generator
 from models.discriminator import Discriminator as Discriminator
@@ -198,6 +199,7 @@ def main():
         '.gitignore',
         '.nsmlignore',
         'resrc']
+
     makedirs(os.path.join(args.log_dir, 'codes'))
     for to_make in dirs_to_make:
         if to_make in not_dirs:
@@ -258,6 +260,8 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.infer:
         full_dataset = get_dataset_for_inference(args, args.img_paths)
         infered_images = infer(full_dataset, networks, args)
+        infered_images = transforms.ToPILImage(infered_images[0])
+        infered_images.save('sample.png')
         return
 
     # get dataset and data loader
