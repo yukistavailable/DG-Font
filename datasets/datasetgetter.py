@@ -17,8 +17,12 @@ class Compose(object):
 
 def get_dataset(args):
 
-    mean = [0.5, 0.5, 0.5]
-    std = [0.5, 0.5, 0.5]
+    if args.input_ch == 1:
+        mean = [0.5]
+        std = [0.5]
+    else:
+        mean = [0.5, 0.5, 0.5]
+        std = [0.5, 0.5, 0.5]
 
     normalize = transforms.Normalize(mean=mean, std=std)
 
