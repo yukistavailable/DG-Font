@@ -12,6 +12,7 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 from torchvision.transforms.functional import to_pil_image
+from torchvision.utils import make_grid
 
 from models.generator import Generator as Generator
 from models.discriminator import Discriminator as Discriminator
@@ -231,10 +232,10 @@ def main():
             for py in tmp_files:
                 copyfile(py, os.path.join(args.log_dir, 'codes', py[2:]))
 
-    main_worker(args.gpu, ngpus_per_node, args)
+    main_worker(args)
 
 
-def main_worker(gpu, ngpus_per_node, args):
+def main_worker(args):
     if args.gpu is None:
         args.device = 'cpu'
     else:
@@ -273,10 +274,10 @@ def main_worker(gpu, ngpus_per_node, args):
         print('START INFERING IMAGES')
         full_dataset = get_dataset_for_inference(args, args.img_paths)
         infered_images = infer(full_dataset, networks, args)
-        infered_images = to_pil_image(infered_images[0].to('cpu'))
-        infered_images.save('sample.png')
+        infered_images = to_pil_image(make_grid(infered_images.to('cpu')))
+        infered_images.save('../sample.png')
         print('FINISH INFERING IMAGES')
-        return
+        return infered_images
 
     # get dataset and data loader
     train_dataset, val_dataset = get_dataset(args)

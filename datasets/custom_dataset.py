@@ -5,6 +5,8 @@ from PIL import Image
 import os
 import os.path
 import sys
+from io import BytesIO
+import pickle
 
 
 def has_file_allowed_extension(filename, extensions):
@@ -210,6 +212,48 @@ def default_loader(path, input_ch=3):
         return accimage_loader(path, input_ch=3)
     else:
         return pil_loader(path, input_ch)
+
+
+class PickledImageProvider(object):
+    def __init__(self, obj_path):
+        self.obj_path = obj_path
+        self.examples = self.load_pickled_examples()
+
+    def load_pickled_examples(self):
+        with open(self.obj_path, "rb") as of:
+            examples = list()
+            while True:
+                try:
+                    e = pickle.load(of)
+                    examples.append(e)
+                    if len(examples) % 100000 == 0:
+                        print("processed %d examples" % len(examples))
+                except EOFError:
+                    break
+                except Exception:
+                    pass
+            print("unpickled total %d examples" % len(examples))
+            return examples
+
+
+class DatasetDumped(data.Dataset):
+    def __init__(self, obj_path, transform=None, input_ch=3):
+        self.image_provider = PickledImageProvider(obj_path)
+        self.transform = transform
+        self.input_ch = input_ch
+
+    def __getitem__(self, index):
+        target, sample = self.image_provider.examples[index]
+        sample = BytesIO(sample)
+        sample = Image.open(sample)
+        if self.input_ch == 1:
+            sample.convert('L')
+        if self.transform is not None:
+            sample = self.transform(sample)
+        return sample, target
+
+    def __len__(self):
+        return len(self.image_provider.examples)
 
 
 class DatasetImages(data.Dataset):
