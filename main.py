@@ -257,9 +257,6 @@ def main_worker(args):
     args.epoch_avg_subhead_acc = []
     args.epoch_stats = []
 
-    # Logging
-    logger = SummaryWriter(args.event_dir)
-
     # build model - return dict
     networks, opts = build_model(args)
 
@@ -278,6 +275,9 @@ def main_worker(args):
         infered_images.save('../sample.png')
         print('FINISH INFERING IMAGES')
         return infered_images
+
+    # Logging
+    logger = SummaryWriter(args.event_dir)
 
     # get dataset and data loader
     train_dataset, val_dataset = get_dataset(args)
