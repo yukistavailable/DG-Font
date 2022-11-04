@@ -57,6 +57,60 @@ def infer(full_dataset, networks, args):
     return result
 
 
+def infer_from_style_and_content(
+        style_dataset,
+        content_dataset,
+        networks,
+        args):
+    # set nets
+    D = networks['D']
+    G = networks['G']
+    C = networks['C']
+    C_EMA = networks['C_EMA']
+    G_EMA = networks['G_EMA']
+    # switch to train mode
+    D.eval()
+    G.eval()
+    C.eval()
+    C_EMA.eval()
+    G_EMA.eval()
+
+    assert len(style_dataset) == len(content_dataset)
+    with torch.no_grad():
+        style_dl = torch.utils.data.DataLoader(
+            style_dataset,
+            batch_size=args.batch_size,
+            shuffle=False,
+            num_workers=0,
+            pin_memory=True,
+            drop_last=False)
+        style_it = iter(style_dl)
+
+        content_dl = torch.utils.data.DataLoader(
+            content_dataset,
+            batch_size=args.batch_size,
+            shuffle=False,
+            num_workers=0,
+            pin_memory=True,
+            drop_last=False)
+        content_it = iter(content_dl)
+        result = None
+        for (
+                style_imgs, _), (content_imgs, _) in zip(
+                style_it, content_it):
+            style_imgs = style_imgs.to(args.device)
+            content_imgs = content_imgs.to(args.device)
+            styles = C.moco(style_imgs)
+
+            contents, skip1, skip2 = G.cnt_encoder(content_imgs)
+            x_fake, _ = G.decode(contents, styles, skip1, skip2)
+            if result is None:
+                result = x_fake.clone()
+            else:
+                result = torch.cat((result, x_fake), 0)
+    return result
+
+
 def validateUN(full_dataset, networks, args, epoch=999):
     # set nets
     D = networks['D']
