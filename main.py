@@ -146,7 +146,13 @@ def main():
         type=int,
         help='check point step')
     parser.add_argument(
-        '--img_paths',
+        '--style_img_paths',
+        required=False,
+        nargs='*',
+        type=str,
+        help='Image Paths for inference')
+    parser.add_argument(
+        '--content_img_paths',
         required=False,
         nargs='*',
         type=str,
@@ -160,8 +166,11 @@ def main():
 
     # NAND
     assert not (args.validation and args.infer)
+
     if args.infer:
-        assert args.img_paths is not None
+        assert args.style_img_paths is not None
+        assert args.content_img_paths is not None
+        assert len(args.style_img_paths) == len(args.content_img_paths)
 
     print("PYTORCH VERSION", torch.__version__)
     args.data_dir = args.data_path
@@ -269,8 +278,10 @@ def main_worker(args):
 
     if args.infer:
         print('START INFERING IMAGES')
-        full_dataset = get_dataset_for_inference(args, args.img_paths)
-        infered_images = infer(full_dataset, networks, args)
+        style_dataset = get_dataset_for_inference(args, args.style_img_paths)
+        content_dataset = get_dataset_for_inference(
+            args, args.content_img_paths)
+        infered_images = infer(style_dataset, content_dataset, networks, args)
         infered_images = to_pil_image(make_grid(infered_images.to('cpu')))
         infered_images.save('../sample.png')
         print('FINISH INFERING IMAGES')

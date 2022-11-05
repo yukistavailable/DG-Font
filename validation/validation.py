@@ -20,7 +20,7 @@ from scipy import linalg
 from tools.utils import *
 
 
-def infer(full_dataset, networks, args):
+def infer_same(full_dataset, networks, args):
     # set nets
     D = networks['D']
     G = networks['G']
@@ -57,7 +57,7 @@ def infer(full_dataset, networks, args):
     return result
 
 
-def infer_from_style_and_content(
+def infer(
         style_dataset,
         content_dataset,
         networks,
