@@ -109,6 +109,33 @@ def infer(
     return result
 
 
+def infer_with_tensor(
+        style_tensor,
+        content_tensor,
+        networks,
+        args):
+    # set nets
+    G = networks['G']
+    C = networks['C']
+    C_EMA = networks['C_EMA']
+    G_EMA = networks['G_EMA']
+    # switch to train mode
+    G.eval()
+    C.eval()
+    C_EMA.eval()
+    G_EMA.eval()
+
+    assert style_tensor.shape == content_tensor.shape
+    with torch.no_grad():
+        style_tensor = style_tensor.to(args.device)
+        content_tensor = content_tensor.to(args.device)
+        styles = C.moco(style_tensor)
+
+        contents, skip1, skip2 = G.cnt_encoder(content_tensor)
+        x_fake, _ = G.decode(contents, styles, skip1, skip2)
+    return x_fake
+
+
 def infer_styles(
         style_dataset,
         networks,
@@ -141,6 +168,24 @@ def infer_styles(
             else:
                 result = torch.cat((result, styles), 0)
     return result
+
+
+def infer_styles_with_tensor(
+        character_tensor,
+        networks,
+        args):
+    # set nets
+    C = networks['C']
+    C_EMA = networks['C_EMA']
+
+    # switch to eval mode
+    C.eval()
+    C_EMA.eval()
+
+    with torch.no_grad():
+        character_tensor = character_tensor.to(args.device)
+        styles = C.moco(character_tensor)
+    return styles
 
 
 def infer_from_style(
@@ -187,6 +232,38 @@ def infer_from_style(
             else:
                 result = torch.cat((result, x_fake), 0)
     return result
+
+
+def infer_from_style_with_tensor(
+        style_tensor,
+        content_tensor,
+        networks,
+        args):
+    # set nets
+    G = networks['G']
+    G_EMA = networks['G_EMA']
+
+    # switch to train mode
+    G.eval()
+    G_EMA.eval()
+
+    with torch.no_grad():
+        styles = None
+        style = style_tensor.to(args.device)
+        style = style.unsqueeze(0)
+
+        for _ in range(len(content_tensor)):
+            if styles is None:
+                styles = style.clone()
+            else:
+                styles = torch.cat((styles, style), 0)
+
+        content_tensor = content_tensor.to(args.device)
+
+        contents, skip1, skip2 = G.cnt_encoder(content_tensor)
+        x_fake, _ = G.decode(
+            contents, styles, skip1, skip2)
+    return x_fake
 
 
 def validateUN(full_dataset, networks, args, epoch=999):

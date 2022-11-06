@@ -280,15 +280,6 @@ def main_worker(args):
     # print all the argument
     print_args(args)
 
-    if args.infer_styles:
-        print('START INFERING STYLES')
-        assert args.style_img_paths is not None
-
-        style_dataset = get_dataset_for_inference(args, args.style_img_paths)
-        infered_styles = infer_styles(style_dataset, networks, args)
-        print('FINISH INFERING STYLES')
-        return infered_styles
-
     if args.infer:
         print('START INFERING IMAGES')
         style_dataset = get_dataset_for_inference(args, args.style_img_paths)
