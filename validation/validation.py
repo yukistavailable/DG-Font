@@ -180,7 +180,8 @@ def infer_from_style(
             content_imgs = content_imgs.to(args.device)
 
             contents, skip1, skip2 = G.cnt_encoder(content_imgs)
-            x_fake, _ = G.decode(contents, styles, skip1, skip2)
+            x_fake, _ = G.decode(
+                contents, styles[:len(content_imgs)], skip1, skip2)
             if result is None:
                 result = x_fake.clone()
             else:
