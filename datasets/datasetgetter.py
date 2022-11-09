@@ -94,7 +94,21 @@ def get_dataset(args):
 
     train_dataset = {'TRAIN': train_dataset, 'FULL': dataset}
 
-    return train_dataset, val_dataset
+    content_dataset = None
+
+    if args.fixed_content_font:
+        idx = None
+        for k in args.content_font_id:
+            tmp_idx = (tot_targets == k).nonzero()
+            tmp_idx = tmp_idx[:-args.val_num]
+            if idx is None:
+                idx = tmp_idx.clone()
+            else:
+                idx = torch.cat((idx, tmp_idx))
+
+        content_dataset = torch.utils.data.Subset(dataset, idx)
+
+    return train_dataset, val_dataset, content_dataset
 
 
 def get_dataset_for_inference(args, img_paths):

@@ -88,6 +88,9 @@ class DatasetFolder(data.Dataset):
             extensions,
             transform=None,
             target_transform=None):
+
+        # class_to_idx: the key is dir name and the value is index.
+        # {'id_0': 0, 'id_1': 1, ..., }
         classes, class_to_idx = self._find_classes(root)
 
         # The type of samples: [(img_path, class_idx), (img_path,
@@ -137,6 +140,9 @@ class DatasetFolder(data.Dataset):
                         dir, d))]
         classes.sort()
         classes.sort(key=lambda x: int(x[3:]))
+
+        # the key is dir name and the value is index.
+        # {'id_0': 0, 'id_1': 1, ..., }
         class_to_idx = {classes[i]: i for i in range(len(classes))}
         return classes, class_to_idx
 

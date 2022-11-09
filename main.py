@@ -18,7 +18,7 @@ from models.generator import Generator as Generator
 from models.discriminator import Discriminator as Discriminator
 from models.guidingNet import GuidingNet
 
-from train.train import trainGAN
+from train.train import trainGAN, train_fixed_content
 
 from validation.validation import validateUN, infer, infer_styles, infer_from_style
 
@@ -35,6 +35,11 @@ def main():
         '--data_path',
         type=str,
         default='../data',
+        help='Dataset directory. Please refer Dataset in README.md')
+    parser.add_argument(
+        '--content_data_path',
+        type=str,
+        default='../content-data',
         help='Dataset directory. Please refer Dataset in README.md')
     parser.add_argument(
         '--workers',
@@ -107,6 +112,14 @@ def main():
              'ex) --check_point_path model_3.ckpt')
     parser.add_argument('--validation', dest='validation', action='store_true',
                         help='Call for valiation only mode')
+    parser.add_argument('--fixed_content_font', action='store_true',
+                        help='Call for inference only mode')
+    parser.add_argument(
+        '--content_font_id',
+        required=False,
+        nargs='*',
+        type=str,
+        help='Content Font Id')
     parser.add_argument('--infer', action='store_true',
                         help='Call for inference only mode')
     parser.add_argument('--infer_styles', action='store_true',
@@ -175,6 +188,9 @@ def main():
         assert args.style_img_paths is not None
         assert args.content_img_paths is not None
         assert len(args.style_img_paths) == len(args.content_img_paths)
+
+    if args.fixed_content_font:
+        assert args.content_font_id is not None
 
     print("PYTORCH VERSION", torch.__version__)
     args.data_dir = args.data_path
@@ -295,7 +311,7 @@ def main_worker(args):
     logger = SummaryWriter(args.event_dir)
 
     # get dataset and data loader
-    train_dataset, val_dataset = get_dataset(args)
+    train_dataset, val_dataset, content_dataset = get_dataset(args)
 
     # All the test is done in the training - do not need to call
     if args.validation:
@@ -303,8 +319,13 @@ def main_worker(args):
         validateUN(full_dataset, networks, args, 999)
         return
 
-    train_loader, val_loader, train_sampler = get_loader(
+    train_loader, val_loader = get_loader(
         args, {'train': train_dataset, 'val': val_dataset})
+
+    content_loader = None
+    if content_dataset is not None:
+        content_loader, _ = get_loader(
+            args, {'train': content_dataset, 'val': content_dataset})
 
     # For saving the model
     record_txt = open(os.path.join(args.log_dir, "record.txt"), "a+")
@@ -324,8 +345,14 @@ def main_worker(args):
         if epoch == args.ema_start and 'GAN' in args.train_mode:
             networks['G_EMA'].load_state_dict(networks['G'].state_dict())
 
-        trainGAN(train_loader, networks, opts,
-                 epoch, args, {'logger': logger})
+        if args.fixed_content_font:
+            assert content_loader is not None
+            train_fixed_content(
+                train_loader, content_loader, networks, opts, epoch, args, {
+                    'logger': logger})
+        else:
+            trainGAN(train_loader, networks, opts,
+                     epoch, args, {'logger': logger})
 
         # full_dataset = train_dataset['FULL']
         # validateUN(full_dataset, networks, epoch, args, {'logger': logger})
@@ -447,15 +474,13 @@ def get_loader(args, dataset):
     print(len(val_dataset))
 
     train_dataset_ = train_dataset['TRAIN']
-    train_sampler = None
     train_loader = torch.utils.data.DataLoader(
         train_dataset_,
         batch_size=args.batch_size,
-        shuffle=(
-            train_sampler is None),
+        shuffle=True,
         num_workers=args.workers,
         pin_memory=True,
-        sampler=train_sampler,
+        sampler=None,
         drop_last=False)
 
     val_loader = torch.utils.data.DataLoader(
@@ -471,7 +496,7 @@ def get_loader(args, dataset):
         'VALSET': val_dataset,
         'TRAINSET': train_dataset['FULL']}
 
-    return train_loader, val_loader, train_sampler
+    return train_loader, val_loader
 
 
 def save_model(args, epoch, networks, opts):
