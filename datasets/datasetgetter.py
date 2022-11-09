@@ -107,6 +107,7 @@ def get_dataset(args):
                 idx = torch.cat((idx, tmp_idx))
 
         content_dataset = torch.utils.data.Subset(dataset, idx)
+        content_dataset = {'TRAIN': content_dataset, 'FULL': content_dataset}
 
     return train_dataset, val_dataset, content_dataset
 
