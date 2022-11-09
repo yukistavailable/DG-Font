@@ -334,7 +334,7 @@ def train_fixed_content(
         g_adv_fake = calc_adv_loss(g_fake_logit, 'g')
         g_adv_rec = calc_adv_loss(g_rec_logit, 'g')
 
-        g_adv = g_adv_fake + g_adv_rec
+        g_adv = g_adv_fake + 0.01 * g_adv_rec
 
         g_imgrec = calc_recon_loss(x_rec, x_org)
 
