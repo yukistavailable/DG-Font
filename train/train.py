@@ -251,12 +251,18 @@ def train_fixed_content(
     for i in t_train:
         try:
             styles, style_y = next(style_train_it)
+            if len(styles) < args.batch_size:
+                style_train_it = iter(style_data_loader)
+                styles, style_y = next(style_train_it)
         except BaseException:
             style_train_it = iter(style_data_loader)
             styles, style_y = next(style_train_it)
 
         try:
             contents, content_y = next(content_train_it)
+            if len(contents) < args.batch_size:
+                content_train_it = iter(content_data_loader)
+                contents, content_y = next(content_train_it)
         except BaseException:
             content_train_it = iter(content_data_loader)
             contents, content_y = next(content_train_it)
