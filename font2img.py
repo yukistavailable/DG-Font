@@ -74,7 +74,7 @@ data_root = pathlib.Path(data_dir)
 print(f'Font Data Root: {data_root}')
 
 all_image_paths = list(data_root.glob('*.*tf*'))[args.start_font:]
-all_image_paths = [str(path) for path in all_image_paths]
+all_image_paths = sorted([str(path) for path in all_image_paths])
 print(f'{len(all_image_paths)} fonts are found.')
 for i in range(len(all_image_paths)):
     print(all_image_paths[i])
