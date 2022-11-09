@@ -118,7 +118,7 @@ def main():
         '--content_font_id',
         required=False,
         nargs='*',
-        type=str,
+        type=int,
         help='Content Font Id')
     parser.add_argument('--infer', action='store_true',
                         help='Call for inference only mode')
