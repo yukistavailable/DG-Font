@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pathlib
 import argparse
+from tqdm import tqdm
 
 
 parser = argparse.ArgumentParser(description='Obtaining characters from .ttf')
@@ -77,22 +78,26 @@ all_image_paths = list(data_root.glob('*.*tf*'))[args.start_font:]
 all_image_paths = sorted([str(path) for path in all_image_paths])
 print(f'{len(all_image_paths)} fonts are found.')
 for i in range(len(all_image_paths)):
-    print(all_image_paths[i])
+    # print(all_image_paths[i])
+    if 'ipaexg.ttf' in all_image_paths[i]:
+        print(i)
 
-seq = list()
+print(len(all_image_paths))
 
-for (label, item) in enumerate(all_image_paths):
-    label += args.start_font
-    src_font = ImageFont.truetype(item, size=args.chara_size)
-    for (cnt, chara) in enumerate(characters):
-        img = draw_example(
-            chara,
-            src_font,
-            args.img_size,
-            (args.img_size - args.chara_size) / 2,
-            (args.img_size - args.chara_size) / 2)
-        if img is not None:
-            path_full = os.path.join(args.save_path, 'id_%d' % label)
-            if not os.path.exists(path_full):
-                os.mkdir(path_full)
-            img.save(os.path.join(path_full, "%04d.png" % (cnt)))
+# seq = list()
+#
+# for (label, item) in enumerate(tqdm(all_image_paths)):
+#     label += args.start_font
+#     src_font = ImageFont.truetype(item, size=args.chara_size)
+#     for (cnt, chara) in enumerate(characters):
+#         img = draw_example(
+#             chara,
+#             src_font,
+#             args.img_size,
+#             (args.img_size - args.chara_size) / 2,
+#             (args.img_size - args.chara_size) / 2)
+#         if img is not None:
+#             path_full = os.path.join(args.save_path, 'id_%d' % label)
+#             if not os.path.exists(path_full):
+#                 os.mkdir(path_full)
+#             img.save(os.path.join(path_full, "%04d.png" % (cnt)))

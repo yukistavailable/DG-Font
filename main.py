@@ -148,6 +148,8 @@ def main():
         help='Coefficient of GP of D')
     parser.add_argument('--w_rec', default=0.1, type=float,
                         help='Coefficient of Rec. loss of G')
+    parser.add_argument('--w_sty', default=0.1, type=float,
+                        help='Coefficient of Rec. loss of G')
     parser.add_argument('--w_adv', default=1.0, type=float,
                         help='Coefficient of Adv. loss of G')
     parser.add_argument('--w_vec', default=0.01, type=float,
