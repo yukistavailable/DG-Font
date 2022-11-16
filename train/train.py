@@ -344,8 +344,11 @@ def train_fixed_content(
         c_x_fake, _, _ = G.cnt_encoder(x_fake)
         g_conrec = calc_recon_loss(c_x_fake, c_src)
 
-        g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + \
-            args.w_rec * g_conrec + args.w_off * offset_loss
+        style_x_fake = C.moco(x_fake)
+        g_styrec = calc_recon_loss(style_x_fake, s_ref)
+
+        g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + args.w_rec * \
+            g_conrec + args.w_off * offset_loss + args.w_rec * g_styrec
 
         g_opt.zero_grad()
         c_opt.zero_grad()
