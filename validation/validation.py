@@ -245,9 +245,9 @@ def infer_contents_with_tensor(
     G.eval()
 
     with torch.no_grad():
-        contents, skip1, skip2 = G.cnt_encoder(
+        contents, _, _ = G.cnt_encoder(
             character_tensor.to(args.device))
-    return contents, skip1, skip2
+    return contents
 
 
 def infer_from_style_with_tensor(
