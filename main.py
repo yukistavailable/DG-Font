@@ -37,11 +37,6 @@ def main():
         default='../data',
         help='Dataset directory. Please refer Dataset in README.md')
     parser.add_argument(
-        '--content_data_path',
-        type=str,
-        default='../content-data',
-        help='Dataset directory. Please refer Dataset in README.md')
-    parser.add_argument(
         '--workers',
         default=4,
         type=int,

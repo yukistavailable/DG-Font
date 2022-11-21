@@ -46,7 +46,7 @@ try:
 finally:
     file_object.close()
 
-print('Characters: ', characters)
+print('Characters: ', characters[92:])
 
 
 def draw_single_char(ch, font, canvas_size, x_offset, y_offset):
@@ -77,27 +77,27 @@ print(f'Font Data Root: {data_root}')
 all_image_paths = list(data_root.glob('*.*tf*'))[args.start_font:]
 all_image_paths = sorted([str(path) for path in all_image_paths])
 print(f'{len(all_image_paths)} fonts are found.')
-for i in range(len(all_image_paths)):
-    # print(all_image_paths[i])
-    if 'ipaexg.ttf' in all_image_paths[i]:
-        print(i)
+# for i in range(len(all_image_paths)):
+#     # print(all_image_paths[i])
+#     if 'JP_NotoSerifJP-Regular.otf' in all_image_paths[i]:
+#         print(i)
+
 
 print(len(all_image_paths))
 
-# seq = list()
-#
-# for (label, item) in enumerate(tqdm(all_image_paths)):
-#     label += args.start_font
-#     src_font = ImageFont.truetype(item, size=args.chara_size)
-#     for (cnt, chara) in enumerate(characters):
-#         img = draw_example(
-#             chara,
-#             src_font,
-#             args.img_size,
-#             (args.img_size - args.chara_size) / 2,
-#             (args.img_size - args.chara_size) / 2)
-#         if img is not None:
-#             path_full = os.path.join(args.save_path, 'id_%d' % label)
-#             if not os.path.exists(path_full):
-#                 os.mkdir(path_full)
-#             img.save(os.path.join(path_full, "%04d.png" % (cnt)))
+seq = list()
+for (label, item) in enumerate(tqdm(all_image_paths)):
+    label += args.start_font
+    src_font = ImageFont.truetype(item, size=args.chara_size)
+    for (cnt, chara) in enumerate(characters[92:]):
+        img = draw_example(
+            chara,
+            src_font,
+            args.img_size,
+            (args.img_size - args.chara_size) / 2,
+            (args.img_size - args.chara_size) / 2)
+        if img is not None:
+            path_full = os.path.join(args.save_path, 'id_%d' % label)
+            if not os.path.exists(path_full):
+                os.mkdir(path_full)
+            img.save(os.path.join(path_full, "%04d.png" % (cnt)))

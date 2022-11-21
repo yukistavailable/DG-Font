@@ -234,6 +234,22 @@ def infer_from_style(
     return result
 
 
+def infer_contents_with_tensor(
+        character_tensor,
+        networks,
+        args):
+    # set nets
+    G = networks['G']
+
+    # switch to train mode
+    G.eval()
+
+    with torch.no_grad():
+        contents, skip1, skip2 = G.cnt_encoder(
+            character_tensor.to(args.device))
+    return contents, skip1, skip2
+
+
 def infer_from_style_with_tensor(
         style_tensor,
         content_tensor,
