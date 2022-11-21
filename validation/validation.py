@@ -240,11 +240,14 @@ def infer_contents_with_tensor(
         args):
     # set nets
     G = networks['G']
+    G_EMA = networks['G_EMA']
 
     # switch to train mode
     G.eval()
+    G_EMA.eval()
 
     with torch.no_grad():
+        character_tensor = character_tensor.to(args.device)
         contents, _, _ = G.cnt_encoder(
             character_tensor.to(args.device))
     return contents
