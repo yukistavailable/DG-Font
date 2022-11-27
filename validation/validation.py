@@ -489,7 +489,7 @@ def evaluate_style(networks, args):
         return loss(generated_tensor, target_tensor)
 
     sampled_content_chars = kanji_chars
-    content_font_path = os.path.join(args.base_dir, 'ipaexg.ttf')
+    content_font_path = os.path.join(args.base_dir, 'all-fonts/ipaexg.ttf')
     content_font = ImageFont.truetype(content_font_path, size=70)
     content_tensor = chars_to_tensor(sampled_content_chars, content_font)
 
@@ -524,5 +524,5 @@ def evaluate_style(networks, args):
         for (k, v) in sorted_loss_info_list:
             sorted_loss_info[k] = v
         print(style_name)
-        with open(f'../../statistic/style_chars/{style_name}_kanji.json', 'w') as f:
+        with open(os.path.join(args.base_dir, f'statistic/style_chars/{style_name}_kanji.json'), 'w') as f:
             json.dump(loss_info, f)
