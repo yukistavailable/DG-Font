@@ -5,7 +5,12 @@ import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.utils as vutils
 from torchvision import transforms
+from torchvision.transforms.functional import to_pil_image, to_tensor
 import os
+import glob
+import random
+import json
+from PIL import Image, ImageFont, ImageDraw
 
 
 try:
@@ -249,7 +254,7 @@ def infer_contents_with_tensor(
     with torch.no_grad():
         character_tensor = character_tensor.to(args.device)
         contents, _, _ = G.cnt_encoder(
-            character_tensor.to(args.device))
+            character_tensor)
     return contents
 
 
@@ -400,3 +405,124 @@ def validateUN(full_dataset, networks, args, epoch=999):
                         nrow=(
                             x_res_ema.size(0) // (
                                 x_src.size(0) + 2) + 1))
+
+
+def evaluate_style(networks, args):
+    with open('../japanese_characters.txt', 'r') as f:
+        chars = f.read()
+
+    kanji_chars = chars[92:]
+    _img = Image.new("RGB", (args.img_size, args.img_size), (255, 255, 255))
+    _img_gray = Image.new("L", (args.img_size, args.img_size), (255))
+    white_space_hashes = [hash(_img.tobytes())]
+    white_space_tensor = to_tensor(_img_gray)
+
+    loss = torch.nn.L1Loss(reduction='mean')
+
+    def chars_to_tensor(chars, font):
+        char_size = args.char_size
+        canvas_size = args.img_size
+        normalize = transforms.Normalize(mean=[0.5], std=[0.5])
+        tensor = [
+            normalize(
+                to_tensor(
+                    draw_single_char(
+                        char,
+                        font,
+                        canvas_size))).unsqueeze(0) for char in chars]
+        tensor = torch.cat(tensor)
+        return tensor
+
+    def chars_to_style_latent_vector(chars, font):
+        style_tensor = chars_to_tensor(chars, font)
+        styles = infer_styles_with_tensor(style_tensor, networks, args)
+        return styles
+
+    def draw_single_char(ch, font, canvas_size, char_size=70):
+        img = Image.new("RGB", (canvas_size, canvas_size), (255, 255, 255))
+        draw = ImageDraw.Draw(img)
+        draw.text((canvas_size // 2, canvas_size // 2), ch,
+                  (0, 0, 0), font=font, anchor='mm')
+        img = img.convert('L')
+        return img
+
+    def draw_example(ch, src_font, canvas_size, x_offset, y_offset):
+        src_img = draw_single_char(ch, src_font, canvas_size)
+        dst_hash = hash(src_img.tobytes())
+        if dst_hash in white_space_hashes:
+            print('white space')
+            return None
+        return src_img
+
+    def generate_chars_with_style(
+            style_latent_vector,
+            content_tensor,
+            model=networks,
+            args=args,
+            batch_size=32):
+        generated_tensor = None
+        count = 0
+        while True:
+            tmp_batch_size = batch_size
+            if count + batch_size > len(content_tensor):
+                tmp_batch_size = len(content_tensor) - count
+            tmp_generated_tensor = infer_from_style_with_tensor(
+                style_latent_vector, content_tensor[count:count + tmp_batch_size], model, args)
+            if generated_tensor is None:
+                generated_tensor = tmp_generated_tensor
+            else:
+                generated_tensor = torch.cat(
+                    (generated_tensor, tmp_generated_tensor))
+            count += batch_size
+            if count >= len(content_tensor):
+                break
+        # print('Generated tensor shape:', generated_tensor.shape)
+        generated_tensor = generated_tensor.cpu()
+        return generated_tensor
+
+    def calculate_loss(
+            generated_tensor,
+            target_tensor,
+            loss=loss,
+            white_space_tensor=white_space_tensor):
+        assert len(generated_tensor) == len(target_tensor)
+        return loss(generated_tensor, target_tensor)
+
+    sampled_content_chars = kanji_chars
+    content_font_path = '../../fonts/ipaexg.ttf'
+    content_font = ImageFont.truetype(content_font_path, size=70)
+    content_tensor = chars_to_tensor(sampled_content_chars, content_font)
+
+    style_font_paths = glob.glob('../../fonts/*tf')
+    print('Number of fonts:', len(style_font_paths))
+
+    sampled_style_chars = kanji_chars
+    for style_font_path in tqdm(style_font_paths):
+        style_name = os.path.splitext(os.path.basename(style_font_path))[0]
+        style_font = ImageFont.truetype(style_font_path, size=70)
+        target_tensor = chars_to_tensor(sampled_content_chars, style_font)
+        print(style_name)
+        print(target_tensor.shape)
+
+        loss_info = {}
+        for char in sampled_style_chars:
+            style_latent_vector = chars_to_style_latent_vector(
+                [char], style_font)
+            generated_tensor = generate_chars_with_style(
+                style_latent_vector, content_tensor, networks, args, batch_size=32)
+            loss_value = calculate_loss(
+                generated_tensor,
+                target_tensor,
+                loss=loss,
+                white_space_tensor=white_space_tensor)
+            loss_info[char] = loss_value
+            # print(loss_value)
+        for key in loss_info.keys():
+            loss_info[key] = float(loss_info[key])
+        sorted_loss_info_list = sorted(loss_info.items(), key=lambda x: x[1])
+        sorted_loss_info = {}
+        for (k, v) in sorted_loss_info_list:
+            sorted_loss_info[k] = v
+        print(style_name)
+        with open(f'../../statistic/style_chars/{style_name}_kanji.json', 'w') as f:
+            json.dump(loss_info, f)

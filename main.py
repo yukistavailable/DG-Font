@@ -20,7 +20,7 @@ from models.guidingNet import GuidingNet
 
 from train.train import trainGAN, train_fixed_content
 
-from validation.validation import validateUN, infer, infer_styles, infer_from_style
+from validation.validation import validateUN, infer, infer_styles, infer_from_style, evaluate_style
 
 from tools.utils import *
 from datasets.datasetgetter import get_dataset, get_dataset_for_inference
@@ -121,6 +121,8 @@ def main():
                         help='Call for inference only mode')
     parser.add_argument('--infer_from_style', action='store_true',
                         help='Call for inference only mode')
+    parser.add_argument('--evaluate_style', action='store_true',
+                        help='Call for Style Evaluation only mode')
     parser.add_argument('--gpu', default=None, type=str,
                         help='GPU id to use.')
     parser.add_argument(
@@ -292,6 +294,11 @@ def main_worker(args):
 
     # print all the argument
     print_args(args)
+
+    if args.evaluate_style:
+        print('EVALUATE STYLE')
+        evaluate_style(networks, args)
+        return
 
     if args.infer:
         print('START INFERING IMAGES')
