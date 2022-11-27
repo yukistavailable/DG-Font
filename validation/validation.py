@@ -408,7 +408,7 @@ def validateUN(full_dataset, networks, args, epoch=999):
 
 
 def evaluate_style(networks, args):
-    with open('../japanese_characters.txt', 'r') as f:
+    with open('/home/u00745/DG-Font/japanese_characters.txt', 'r') as f:
         chars = f.read()
 
     kanji_chars = chars[92:]
@@ -489,11 +489,11 @@ def evaluate_style(networks, args):
         return loss(generated_tensor, target_tensor)
 
     sampled_content_chars = kanji_chars
-    content_font_path = '../../fonts/ipaexg.ttf'
+    content_font_path = os.path.join(args.base_dir, 'ipaexg.ttf')
     content_font = ImageFont.truetype(content_font_path, size=70)
     content_tensor = chars_to_tensor(sampled_content_chars, content_font)
 
-    style_font_paths = glob.glob('../../fonts/*tf')
+    style_font_paths = glob.glob(os.path.join(args.base_dir, 'all-fonts/*tf'))
     print('Number of fonts:', len(style_font_paths))
 
     sampled_style_chars = kanji_chars

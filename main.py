@@ -99,6 +99,10 @@ def main():
              'ex) --load_model GAN_20190101_101010'
              'It loads the latest .ckpt file specified in checkpoint.txt in GAN_20190101_101010')
     parser.add_argument(
+        '--base_dir',
+        default=None,
+        type=str)
+    parser.add_argument(
         '--check_point_path',
         default=None,
         type=str,
