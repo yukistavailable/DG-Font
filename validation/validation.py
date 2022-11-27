@@ -420,7 +420,6 @@ def evaluate_style(networks, args):
     loss = torch.nn.L1Loss(reduction='mean')
 
     def chars_to_tensor(chars, font):
-        char_size = args.char_size
         canvas_size = args.img_size
         normalize = transforms.Normalize(mean=[0.5], std=[0.5])
         tensor = [
