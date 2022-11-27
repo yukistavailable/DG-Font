@@ -504,7 +504,7 @@ def evaluate_style(networks, args):
         print(target_tensor.shape)
 
         loss_info = {}
-        for char in sampled_style_chars:
+        for char in tqdm(sampled_style_chars):
             style_latent_vector = chars_to_style_latent_vector(
                 [char], style_font)
             generated_tensor = generate_chars_with_style(
