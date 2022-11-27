@@ -445,14 +445,6 @@ def evaluate_style(networks, args):
         img = img.convert('L')
         return img
 
-    def draw_example(ch, src_font, canvas_size, x_offset, y_offset):
-        src_img = draw_single_char(ch, src_font, canvas_size)
-        dst_hash = hash(src_img.tobytes())
-        if dst_hash in white_space_hashes:
-            print('white space')
-            return None
-        return src_img
-
     def generate_chars_with_style(
             style_latent_vector,
             content_tensor,
@@ -487,7 +479,8 @@ def evaluate_style(networks, args):
         assert len(generated_tensor) == len(target_tensor)
         return loss(generated_tensor, target_tensor)
 
-    sampled_content_chars = kanji_chars
+    random.seed(123)
+    sampled_content_chars = random.sample(kanji_chars, 200)
     content_font_path = os.path.join(args.base_dir, 'all-fonts/ipaexg.ttf')
     content_font = ImageFont.truetype(content_font_path, size=70)
     content_tensor = chars_to_tensor(sampled_content_chars, content_font)
