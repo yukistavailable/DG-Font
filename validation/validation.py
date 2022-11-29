@@ -485,7 +485,8 @@ def evaluate_style(networks, args):
     content_font = ImageFont.truetype(content_font_path, size=70)
     content_tensor = chars_to_tensor(sampled_content_chars, content_font)
 
-    style_font_paths = glob.glob(os.path.join(args.base_dir, 'all-fonts/*tf'))
+    style_font_paths = glob.glob(os.path.join(
+        args.base_dir, 'all-fonts/*tf'))[207:]
     print('Number of fonts:', len(style_font_paths))
 
     sampled_style_chars = kanji_chars
