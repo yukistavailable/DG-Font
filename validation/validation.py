@@ -620,7 +620,7 @@ def top_average_evaluate(networks, args):
         os.path.join(
             args.base_dir,
             'statistic/style_chars/*_kanji.json'))
-    all_font_paths = glob.glob(os.path.join(args.base_dir, 'all_fonts/*tf'))
+    all_font_paths = glob.glob(os.path.join(args.base_dir, 'all-fonts/*tf'))
     print(len(chars))
     print(len(style_jsons))
     print(len(all_font_paths))
