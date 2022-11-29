@@ -485,8 +485,23 @@ def evaluate_style(networks, args):
     content_font = ImageFont.truetype(content_font_path, size=70)
     content_tensor = chars_to_tensor(sampled_content_chars, content_font)
 
-    style_font_paths = glob.glob(os.path.join(
-        args.base_dir, 'all-fonts/*tf'))[207:]
+    # style_font_paths = glob.glob(os.path.join(
+    #     args.base_dir, 'all-fonts/*tf'))[207:]
+    style_fonts = [
+        'BIZUDPMincho-Regular.ttf',
+        '851H-kktt_004.ttf',
+        'JP_NotoSerifJP-Regular.otf',
+        '03スマートフォントUI.otf',
+        'Corporate-Logo-Rounded-Bold-ver3.otf',
+        '851CHIKARA-DZUYOKU_kanaA_004.ttf',
+        'JK-Maru-Gothic-M.otf',
+    ]
+    style_font_paths = [
+        os.path.join(
+            args.base_dir,
+            'all-fonts',
+            font) for font in style_fonts]
+
     print('Number of fonts:', len(style_font_paths))
 
     sampled_style_chars = kanji_chars
@@ -630,8 +645,8 @@ def top_average_evaluate(networks, args):
         file_name = os.path.splitext(os.path.basename(style_json))[0]
         font_name = file_name.replace('_kanji', '')
         for font_path in all_font_paths:
-            font_path = os.path.splitext(os.path.basename(font_path))[0]
-            if font_name == font_path:
+            tmp_font_path = os.path.splitext(os.path.basename(font_path))[0]
+            if font_name == tmp_font_path:
                 style_font_paths.append(font_path)
                 break
 
