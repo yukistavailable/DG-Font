@@ -650,6 +650,21 @@ def top_average_evaluate(networks, args):
                 style_font_paths.append(font_path)
                 break
 
+    style_fonts = [
+        'BIZUDPMincho-Regular.ttf',
+        '851H-kktt_004.ttf',
+        'JP_NotoSerifJP-Regular.otf',
+        '03スマートフォントUI.otf',
+        'Corporate-Logo-Rounded-Bold-ver3.otf',
+        '851CHIKARA-DZUYOKU_kanaA_004.ttf',
+        'JK-Maru-Gothic-M.otf',
+    ]
+    style_font_paths = [
+        os.path.join(
+            args.base_dir,
+            'all-fonts',
+            font) for font in style_fonts]
+
     random.seed(123)
     sampled_content_chars = random.sample(kanji_chars, 200)
     content_font_path = os.path.join(args.base_dir, 'all-fonts/ipaexg.ttf')
