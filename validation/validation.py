@@ -630,7 +630,8 @@ def top_average_evaluate(networks, args):
         file_name = os.path.splitext(os.path.basename(style_json))[0]
         font_name = file_name.replace('_kanji', '')
         for font_path in all_font_paths:
-            if font_name in font_path:
+            font_path = os.path.splitext(os.path.basename(font_path))[0]
+            if font_name == font_path:
                 style_font_paths.append(font_path)
                 break
 
