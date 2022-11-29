@@ -408,7 +408,7 @@ def validateUN(full_dataset, networks, args, epoch=999):
 
 
 def evaluate_style(networks, args):
-    with open('/home/u00745/DG-Font/japanese_characters.txt', 'r') as f:
+    with open(os.path.join(args.base_dir, 'DG-Font/japanese_characters.txt'), 'r') as f:
         chars = f.read()
 
     kanji_chars = chars[92:]
@@ -518,4 +518,146 @@ def evaluate_style(networks, args):
             sorted_loss_info[k] = v
         print(style_name)
         with open(os.path.join(args.base_dir, f'statistic/style_chars/{style_name}_kanji.json'), 'w') as f:
+            json.dump(loss_info, f)
+
+
+def top_average_evaluate(networks, args):
+    with open(os.path.join(args.base_dir, 'DG-Font/japanese_characters.txt'), 'r') as f:
+        chars = f.read()
+
+    kanji_chars = chars[92:]
+    _img = Image.new("RGB", (args.img_size, args.img_size), (255, 255, 255))
+    _img_gray = Image.new("L", (args.img_size, args.img_size), (255))
+    white_space_hashes = [hash(_img.tobytes())]
+    white_space_tensor = to_tensor(_img_gray)
+
+    loss = torch.nn.L1Loss(reduction='mean')
+
+    def chars_to_tensor(chars, font):
+        canvas_size = args.img_size
+        normalize = transforms.Normalize(mean=[0.5], std=[0.5])
+        tensor = [
+            normalize(
+                to_tensor(
+                    draw_single_char(
+                        char,
+                        font,
+                        canvas_size))).unsqueeze(0) for char in chars]
+        tensor = torch.cat(tensor)
+        return tensor
+
+    def chars_to_style_latent_vector(chars, font):
+        style_tensor = chars_to_tensor(chars, font)
+        styles = infer_styles_with_tensor(style_tensor, networks, args)
+        return styles
+
+    def draw_single_char(ch, font, canvas_size, char_size=70):
+        img = Image.new("RGB", (canvas_size, canvas_size), (255, 255, 255))
+        draw = ImageDraw.Draw(img)
+        draw.text((canvas_size // 2, canvas_size // 2), ch,
+                  (0, 0, 0), font=font, anchor='mm')
+        img = img.convert('L')
+        return img
+
+    def generate_chars_with_style(
+            style_latent_vector,
+            content_tensor,
+            model=networks,
+            args=args,
+            batch_size=32):
+        generated_tensor = None
+        count = 0
+        while True:
+            tmp_batch_size = batch_size
+            if count + batch_size > len(content_tensor):
+                tmp_batch_size = len(content_tensor) - count
+            tmp_generated_tensor = infer_from_style_with_tensor(
+                style_latent_vector, content_tensor[count:count + tmp_batch_size], model, args)
+            if generated_tensor is None:
+                generated_tensor = tmp_generated_tensor
+            else:
+                generated_tensor = torch.cat(
+                    (generated_tensor, tmp_generated_tensor))
+            count += batch_size
+            if count >= len(content_tensor):
+                break
+        # print('Generated tensor shape:', generated_tensor.shape)
+        generated_tensor = generated_tensor.cpu()
+        return generated_tensor
+
+    def calculate_loss(
+            generated_tensor,
+            target_tensor,
+            loss=loss,
+            white_space_tensor=white_space_tensor):
+        assert len(generated_tensor) == len(target_tensor)
+        return loss(generated_tensor, target_tensor)
+
+    def generate_average_style_latent_vector(
+            style_font, style_chars, batch_size=32):
+        count = 0
+        style_latent_vector = None
+        while True:
+            tmp_batch_size = min(batch_size, len(style_chars) - count)
+            tmp_style_latent_vector = chars_to_style_latent_vector(
+                kanji_chars[count:count + tmp_batch_size], style_font)
+            count += tmp_batch_size
+            if style_latent_vector is None:
+                style_latent_vector = torch.sum(
+                    tmp_style_latent_vector.clone().cpu(), 0).unsqueeze(0)
+            else:
+                style_latent_vector = torch.sum(
+                    torch.cat(
+                        (style_latent_vector,
+                         tmp_style_latent_vector.cpu()),
+                        0),
+                    0).unsqueeze(0)
+            if count >= len(style_chars):
+                break
+        return style_latent_vector / len(style_chars)
+
+    style_jsons = glob.glob(
+        os.path.join(
+            args.base_dir,
+            'statistic/style_chars/*_kanji.json'))
+    all_font_paths = glob.glob(os.path.join(args.base_dir, 'all_fonts/*tf'))
+
+    base_font_path = '../all-fonts'
+    style_font_paths = []
+    for style_json in style_jsons:
+        file_name = os.path.splitext(os.path.basename(style_json))[0]
+        font_name = file_name.replace('_kanji', '')
+        for font_path in all_font_paths:
+            if font_name in font_path:
+                style_font_paths.append(font_path)
+                break
+
+    random.seed(123)
+    sampled_content_chars = random.sample(kanji_chars, 200)
+    content_font_path = os.path.join(args.base_dir, 'all-fonts/ipaexg.ttf')
+    content_font = ImageFont.truetype(content_font_path, size=70)
+    content_tensor = chars_to_tensor(sampled_content_chars, content_font)
+
+    for style_font_path in tqdm(style_font_paths):
+        style_name = os.path.splitext(os.path.basename(style_font_path))[0]
+        style_font = ImageFont.truetype(style_font_path, size=70)
+        target_tensor = chars_to_tensor(sampled_content_chars, style_font)
+        print(target_tensor.shape)
+        with open(os.path.join(args.base_dir, f'statistic/style_chars/{style_name}_kanji.json'), 'r') as f:
+            loss_info = json.load(f)
+        tops = [2, 3, 5, 7, 10, 20, 30, 50, 100, 300, 1000, len(kanji_chars)]
+        for top in tqdm(tops):
+            style_chars = ''.join(list(loss_info.keys())[:top])
+            average_style_latent_vector = generate_average_style_latent_vector(
+                style_font, style_chars)
+            generated_tensor = generate_chars_with_style(
+                average_style_latent_vector, content_tensor, networks, args, batch_size=32)
+            loss_value = calculate_loss(
+                generated_tensor,
+                target_tensor,
+                loss=loss,
+                white_space_tensor=white_space_tensor)
+            loss_info['top' + str(len(style_chars))] = float(loss_value)
+            print(f'Top{top} Loss: {float(loss_value)}')
+        with open(os.path.join(args.base_dir, f'statistic/style_chars/{style_name}_kanji_added_top.json'), 'w') as f:
             json.dump(loss_info, f)
