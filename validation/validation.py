@@ -621,8 +621,10 @@ def top_average_evaluate(networks, args):
             args.base_dir,
             'statistic/style_chars/*_kanji.json'))
     all_font_paths = glob.glob(os.path.join(args.base_dir, 'all_fonts/*tf'))
+    print(len(chars))
+    print(len(style_jsons))
+    print(len(all_font_paths))
 
-    base_font_path = '../all-fonts'
     style_font_paths = []
     for style_json in style_jsons:
         file_name = os.path.splitext(os.path.basename(style_json))[0]
