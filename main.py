@@ -202,6 +202,10 @@ def main():
     if args.fixed_content_font:
         assert args.content_font_id is not None
 
+    print("______________________________________")
+    print(args.style_norm)
+    print("______________________________________")
+
     print("PYTORCH VERSION", torch.__version__)
     args.data_dir = args.data_path
     args.start_epoch = 0
