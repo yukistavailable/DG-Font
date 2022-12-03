@@ -370,6 +370,8 @@ def train_fixed_content(
         c_opt.step()
         g_opt.step()
 
+        break
+
         ##################
         # END Train GANs #
         ##################
