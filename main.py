@@ -357,7 +357,8 @@ def main_worker(args):
     content_loader = None
     if content_dataset is not None:
         content_loader, _ = get_loader(
-            args, {'train': content_dataset, 'val': content_dataset})
+            args, {
+                'train': content_dataset, 'val': content_dataset}, shuffle=True, is_content=True)
 
     # For saving the model
     record_txt = open(os.path.join(args.log_dir, "record.txt"), "a+")
@@ -499,7 +500,7 @@ def load_model(args, networks, opts):
               .format(load_file, checkpoint['epoch']))
 
 
-def get_loader(args, dataset, shuffle=True):
+def get_loader(args, dataset, shuffle=True, is_content=False):
     train_dataset = dataset['train']
     val_dataset = dataset['val']
 
@@ -507,7 +508,7 @@ def get_loader(args, dataset, shuffle=True):
 
     train_dataset_ = train_dataset['TRAIN']
 
-    if args.content_norm:
+    if args.content_norm and is_content:
         train_loader = torch.utils.data.DataLoader(
             train_dataset_,
             batch_size=1,
