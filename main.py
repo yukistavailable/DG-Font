@@ -163,7 +163,7 @@ def main():
                         help='Coefficient of Style vector rec. loss of G')
     parser.add_argument('--w_sty_norm', default=0.1, type=float,
                         help='Coefficient of Style vector rec. loss of G')
-    parser.add_argument('--w_con_norm', default=0.1, type=float,
+    parser.add_argument('--w_cnt_norm', default=0.1, type=float,
                         help='Coefficient of Style vector rec. loss of G')
 
     parser.add_argument(
