@@ -354,8 +354,8 @@ def train_fixed_content(
                 g_style_norm = calc_style_norm(s_ref)
                 style_norm_count += 1
                 style_norm_amount += g_style_norm.item()
-                print(
-                    f'Style Norm Loss: {style_norm_amount / style_norm_count}')
+                # print(
+                # f'Style Norm Loss: {style_norm_amount / style_norm_count}')
 
         g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + args.w_rec * \
             g_conrec + args.w_off * offset_loss + args.w_rec * g_styrec + \
@@ -369,8 +369,6 @@ def train_fixed_content(
         #     average_gradients(C)
         c_opt.step()
         g_opt.step()
-
-        break
 
         ##################
         # END Train GANs #
