@@ -417,6 +417,7 @@ def train_fixed_content(
                 print('Epoch: [{}/{}] [{}/{}] MODE[{}] Avg Loss: D[{d_losses.avg:.2f}] G[{g_losses.avg:.2f}] '.format(
                     epoch + 1, args.epochs, i + 1, args.iters, training_mode, d_losses=d_losses, g_losses=g_losses))
 
-    print(f'Style Norm Loss: {style_norm_amount / style_norm_count}')
+    if args.style_norm:
+        print(f'Style Norm Loss: {style_norm_amount / style_norm_count}')
     copy_norm_params(G_EMA, G)
     copy_norm_params(C_EMA, C)
