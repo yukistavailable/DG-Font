@@ -336,9 +336,9 @@ def main_worker(args):
     # get dataset and data loader
     train_dataset, val_dataset, content_dataset = get_dataset(args)
 
-    args.shuffle = False
+    args.shuffle = True
     if args.style_norm:
-        args.shuffle = True
+        args.shuffle = False
 
     # All the test is done in the training - do not need to call
     if args.validation:
