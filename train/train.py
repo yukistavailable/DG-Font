@@ -271,8 +271,16 @@ def train_fixed_content(
                 content_train_it = iter(content_data_loader)
                 contents, content_y = next(content_train_it)
             assert len(contents) == 1
+            print("---------------------------------")
+            print(contents.shape)
+            print(content_y.shape)
+            print("---------------------------------")
             contents = torch.cat([contents] * args.batch_size, dim=0)
             content_y = torch.cat([content_y] * args.batch_size, dim=0)
+            print("---------------------------------")
+            print(contents.shape)
+            print(content_y.shape)
+            print("---------------------------------")
         else:
             try:
                 contents, content_y = next(content_train_it)
