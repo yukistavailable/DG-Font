@@ -115,6 +115,8 @@ def main():
                         help='Call for inference only mode')
     parser.add_argument('--style_norm', action='store_true',
                         help='Call for inference only mode')
+    parser.add_argument('--content_norm', action='store_true',
+                        help='Call for inference only mode')
     parser.add_argument(
         '--content_font_id',
         required=False,
@@ -159,7 +161,9 @@ def main():
                         help='Coefficient of Adv. loss of G')
     parser.add_argument('--w_vec', default=0.01, type=float,
                         help='Coefficient of Style vector rec. loss of G')
-    parser.add_argument('--w_sty_norm', default=1.0, type=float,
+    parser.add_argument('--w_sty_norm', default=0.1, type=float,
+                        help='Coefficient of Style vector rec. loss of G')
+    parser.add_argument('--w_con_norm', default=0.1, type=float,
                         help='Coefficient of Style vector rec. loss of G')
 
     parser.add_argument(
@@ -501,14 +505,25 @@ def get_loader(args, dataset, shuffle=True):
     print(len(val_dataset))
 
     train_dataset_ = train_dataset['TRAIN']
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset_,
-        batch_size=args.batch_size,
-        shuffle=shuffle,
-        num_workers=args.workers,
-        pin_memory=True,
-        sampler=None,
-        drop_last=False)
+
+    if args.content_norm:
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset_,
+            batch_size=1,
+            shuffle=shuffle,
+            num_workers=args.workers,
+            pin_memory=True,
+            sampler=None,
+            drop_last=False)
+    else:
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset_,
+            batch_size=args.batch_size,
+            shuffle=shuffle,
+            num_workers=args.workers,
+            pin_memory=True,
+            sampler=None,
+            drop_last=False)
 
     val_loader = torch.utils.data.DataLoader(
         val_dataset,

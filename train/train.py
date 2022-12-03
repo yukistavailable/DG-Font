@@ -245,6 +245,8 @@ def train_fixed_content(
 
     style_norm_count = 0
     style_norm_amount = 0
+    content_norm_count = 0
+    content_norm_amount = 0
 
     # summary writer
     style_train_it = iter(style_data_loader)
@@ -262,14 +264,24 @@ def train_fixed_content(
             style_train_it = iter(style_data_loader)
             styles, style_y = next(style_train_it)
 
-        try:
-            contents, content_y = next(content_train_it)
-            if len(contents) < args.batch_size:
+        if args.content_norm:
+            try:
+                contents, content_y = next(content_train_it)
+            except BaseException:
                 content_train_it = iter(content_data_loader)
                 contents, content_y = next(content_train_it)
-        except BaseException:
-            content_train_it = iter(content_data_loader)
-            contents, content_y = next(content_train_it)
+            assert len(contents) == 1
+            contents = torch.cat([contents] * args.batch_size, dim=0)
+            content_y = torch.cat([content_y] * args.batch_size, dim=0)
+        else:
+            try:
+                contents, content_y = next(content_train_it)
+                if len(contents) < args.batch_size:
+                    content_train_it = iter(content_data_loader)
+                    contents, content_y = next(content_train_it)
+            except BaseException:
+                content_train_it = iter(content_data_loader)
+                contents, content_y = next(content_train_it)
 
         # imgs.shape is [batch_size, input_ch, img_size, img_size]
         # y_org is [class_idx, class_idx, ..., class_idx] and the length is
@@ -357,9 +369,18 @@ def train_fixed_content(
                 # print(
                 # f'Style Norm Loss: {style_norm_amount / style_norm_count}')
 
+        g_content_norm = 0
+        if args.content_norm:
+            if content_y.eq(content_y[0]).all():
+                b, c, h, w = c_src.shape
+                tmp_c_src = c_src.view(b, c * h * w)
+                g_content_norm = calc_style_norm(tmp_c_src)
+                content_norm_count += 1
+                content_norm_amount += g_content_norm.item()
+
         g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + args.w_rec * \
             g_conrec + args.w_off * offset_loss + args.w_rec * g_styrec + \
-            args.w_sty_norm * g_style_norm
+            args.w_sty_norm * g_style_norm + args.w_cnt_norm * g_content_norm
 
         g_opt.zero_grad()
         c_opt.zero_grad()
@@ -417,5 +438,7 @@ def train_fixed_content(
 
     if args.style_norm:
         print(f'Style Norm Loss: {style_norm_amount / style_norm_count}')
+    if args.content_norm:
+        print(f'Content Norm Loss: {content_norm_amount / content_norm_count}')
     copy_norm_params(G_EMA, G)
     copy_norm_params(C_EMA, C)
