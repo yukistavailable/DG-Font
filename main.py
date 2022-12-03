@@ -113,6 +113,8 @@ def main():
                         help='Call for valiation only mode')
     parser.add_argument('--fixed_content_font', action='store_true',
                         help='Call for inference only mode')
+    parser.add_argument('--style_norm', action='store_true',
+                        help='Call for inference only mode')
     parser.add_argument(
         '--content_font_id',
         required=False,
@@ -157,6 +159,9 @@ def main():
                         help='Coefficient of Adv. loss of G')
     parser.add_argument('--w_vec', default=0.01, type=float,
                         help='Coefficient of Style vector rec. loss of G')
+    parser.add_argument('--w_sty_norm', default=1.0, type=float,
+                        help='Coefficient of Style vector rec. loss of G')
+
     parser.add_argument(
         '--w_off',
         default=0.5,
@@ -327,6 +332,10 @@ def main_worker(args):
     # get dataset and data loader
     train_dataset, val_dataset, content_dataset = get_dataset(args)
 
+    args.shuffle = False
+    if args.style_norm:
+        args.shuffle = True
+
     # All the test is done in the training - do not need to call
     if args.validation:
         full_dataset = train_dataset['FULL']
@@ -334,7 +343,7 @@ def main_worker(args):
         return
 
     train_loader, val_loader = get_loader(
-        args, {'train': train_dataset, 'val': val_dataset})
+        args, {'train': train_dataset, 'val': val_dataset}, shuffle=args.shuffle)
 
     content_loader = None
     if content_dataset is not None:
@@ -481,7 +490,7 @@ def load_model(args, networks, opts):
               .format(load_file, checkpoint['epoch']))
 
 
-def get_loader(args, dataset):
+def get_loader(args, dataset, shuffle=True):
     train_dataset = dataset['train']
     val_dataset = dataset['val']
 
@@ -491,7 +500,7 @@ def get_loader(args, dataset):
     train_loader = torch.utils.data.DataLoader(
         train_dataset_,
         batch_size=args.batch_size,
-        shuffle=True,
+        shuffle=shuffle,
         num_workers=args.workers,
         pin_memory=True,
         sampler=None,
@@ -500,7 +509,7 @@ def get_loader(args, dataset):
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
         batch_size=args.val_batch,
-        shuffle=True,
+        shuffle=shuffle,
         num_workers=0,
         pin_memory=True,
         drop_last=False)

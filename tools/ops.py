@@ -21,8 +21,11 @@ def compute_grad_gp_wgan(D, x_real, x_fake, gpu):
     x_interpolate = ((1 - alpha) * x_real + alpha * x_fake).detach()
     x_interpolate.requires_grad = True
     d_inter_logit = D(x_interpolate)
-    grad = torch.autograd.grad(d_inter_logit, x_interpolate,
-                               grad_outputs=torch.ones_like(d_inter_logit), create_graph=True)[0]
+    grad = torch.autograd.grad(
+        d_inter_logit,
+        x_interpolate,
+        grad_outputs=torch.ones_like(d_inter_logit),
+        create_graph=True)[0]
 
     norm = grad.view(grad.size(0), -1).norm(p=2, dim=1)
 
@@ -57,16 +60,20 @@ def calc_iic_loss(x_out, x_tf_out, lamb=1.0, EPS=1e-10):
     assert (p_i_j.size() == (k, k))
 
     p_i = p_i_j.sum(dim=1).view(k, 1).expand(k, k)
-    p_j = p_i_j.sum(dim=0).view(1, k).expand(k,
-                                             k)  # but should be same, symmetric
+    p_j = p_i_j.sum(
+        dim=0).view(
+        1,
+        k).expand(
+            k,
+        k)  # but should be same, symmetric
 
     # avoid NaN losses. Effect will get cancelled out by p_i_j tiny anyway
     p_i_j[(p_i_j < EPS).data] = EPS
     p_j[(p_j < EPS).data] = EPS
     p_i[(p_i < EPS).data] = EPS
 
-    loss = - p_i_j * (torch.log(p_i_j) \
-                      - lamb * torch.log(p_j) \
+    loss = - p_i_j * (torch.log(p_i_j)
+                      - lamb * torch.log(p_j)
                       - lamb * torch.log(p_i))
 
     loss = loss.sum()
@@ -90,6 +97,15 @@ def compute_joint(x_out, x_tf_out):
 
 def calc_recon_loss(predict, target):
     return torch.mean(torch.abs(predict - target))
+
+
+def calc_style_norm(style):
+    style_mean = torch.mean(style, dim=0)
+    style_mean_norm = torch.norm(style_mean)
+    norm_sum = 0
+    for i in range(style.shape[0]):
+        norm_sum += torch.norm(style[i] - style_mean)
+    return norm_sum / style_mean_norm
 
 
 def calc_contrastive_loss(args, query, key, queue, temp=0.07):

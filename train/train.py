@@ -6,7 +6,7 @@ import torch.utils.data
 import torch.utils.data.distributed
 from tools.utils import *
 from tools.ops import compute_grad_gp, update_average, copy_norm_params, queue_data, dequeue_data, \
-    average_gradients, calc_adv_loss, calc_contrastive_loss, calc_recon_loss
+    average_gradients, calc_adv_loss, calc_contrastive_loss, calc_recon_loss, calc_style_norm
 
 
 def trainGAN(data_loader, networks, opts, epoch, args, additional):
@@ -224,18 +224,16 @@ def train_fixed_content(
 
     # set nets
     D = networks['D']
-    # G = networks['G'].module
-    # C = networks['C'].module
-    # G_EMA = networks['G_EMA'].module
-    # C_EMA = networks['C_EMA'].module
     G = networks['G']
     C = networks['C']
     G_EMA = networks['G_EMA']
     C_EMA = networks['C_EMA']
+
     # set opts
     d_opt = opts['D']
     g_opt = opts['G']
     c_opt = opts['C']
+
     # switch to train mode
     D.train()
     G.train()
@@ -244,6 +242,9 @@ def train_fixed_content(
     G_EMA.train()
 
     logger = additional['logger']
+
+    style_norm_count = 0
+    style_norm_amount = 0
 
     # summary writer
     style_train_it = iter(style_data_loader)
@@ -347,8 +348,18 @@ def train_fixed_content(
         style_x_fake = C.moco(x_fake)
         g_styrec = calc_recon_loss(style_x_fake, s_ref)
 
+        g_style_norm = 0
+        if args.style_norm:
+            if style_y.eq(style_y[0]).all():
+                g_style_norm = calc_style_norm(s_ref)
+                style_norm_count += 1
+                style_norm_amount += g_style_norm.item()
+                print(
+                    f'Style Norm Loss: {style_norm_amount / style_norm_count}')
+
         g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + args.w_rec * \
-            g_conrec + args.w_off * offset_loss + args.w_rec * g_styrec
+            g_conrec + args.w_off * offset_loss + args.w_rec * g_styrec + \
+            args.w_sty_norm * g_style_norm
 
         g_opt.zero_grad()
         c_opt.zero_grad()
@@ -404,5 +415,6 @@ def train_fixed_content(
                 print('Epoch: [{}/{}] [{}/{}] MODE[{}] Avg Loss: D[{d_losses.avg:.2f}] G[{g_losses.avg:.2f}] '.format(
                     epoch + 1, args.epochs, i + 1, args.iters, training_mode, d_losses=d_losses, g_losses=g_losses))
 
+    print(f'Style Norm Loss: {style_norm_amount / style_norm_count}')
     copy_norm_params(G_EMA, G)
     copy_norm_params(C_EMA, C)
