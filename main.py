@@ -207,7 +207,8 @@ def main():
         assert args.content_font_id is not None
 
     print("______________________________________")
-    print(args.style_norm)
+    print(f'Style Norm: {args.style_norm}')
+    print(f'Content Norm: {args.content_norm}')
     print("______________________________________")
 
     print("PYTORCH VERSION", torch.__version__)
