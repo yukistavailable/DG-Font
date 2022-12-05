@@ -6,7 +6,7 @@ import torch.utils.data
 import torch.utils.data.distributed
 from tools.utils import *
 from tools.ops import compute_grad_gp, update_average, copy_norm_params, queue_data, dequeue_data, \
-    average_gradients, calc_adv_loss, calc_contrastive_loss, calc_recon_loss, calc_style_norm
+    average_gradients, calc_adv_loss, calc_contrastive_loss, calc_recon_loss, calc_style_norm, calc_variance
 
 
 def trainGAN(data_loader, networks, opts, epoch, args, additional):
@@ -245,6 +245,7 @@ def train_fixed_content(
 
     style_norm_count = 0
     style_norm_amount = 0
+    style_variance_amount = 0
     content_norm_count = 0
     content_norm_amount = 0
 
@@ -369,11 +370,13 @@ def train_fixed_content(
         g_styrec = calc_recon_loss(style_x_fake, s_ref)
 
         g_style_norm = 0
+        g_style_var = 0
         if args.style_norm:
             if style_y.eq(style_y[0]).all():
                 g_style_norm = calc_style_norm(s_ref)
                 style_norm_count += 1
                 style_norm_amount += g_style_norm.item()
+                g_style_var = calc_variance(s_ref)
                 # print(
                 # f'Style Norm Loss: {style_norm_amount / style_norm_count}')
 
@@ -388,7 +391,8 @@ def train_fixed_content(
 
         g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + args.w_rec * \
             g_conrec + args.w_off * offset_loss + args.w_rec * g_styrec + \
-            args.w_sty_norm * g_style_norm + args.w_cnt_norm * g_content_norm
+            args.w_sty_norm * g_style_norm + args.w_cnt_norm * g_content_norm + \
+            args.w_sty_var * g_style_var
 
         g_opt.zero_grad()
         c_opt.zero_grad()
@@ -446,6 +450,7 @@ def train_fixed_content(
 
     if args.style_norm:
         print(f'Style Norm Loss: {style_norm_amount / style_norm_count}')
+        print(f'Style Norm Loss: {style_variance_amount / style_norm_count}')
     if args.content_norm:
         print(f'Content Norm Loss: {content_norm_amount / content_norm_count}')
     copy_norm_params(G_EMA, G)

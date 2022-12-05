@@ -108,6 +108,11 @@ def calc_style_norm(style):
     return norm_sum / style_mean_norm
 
 
+# calculate the mean of the variances of each line
+def calc_variance(x):
+    return torch.mean(torch.var(x, dim=0))
+
+
 def calc_contrastive_loss(args, query, key, queue, temp=0.07):
     N = query.shape[0]
     K = queue.shape[0]
