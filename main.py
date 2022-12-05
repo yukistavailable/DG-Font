@@ -20,7 +20,7 @@ from models.guidingNet import GuidingNet
 
 from train.train import trainGAN, train_fixed_content
 
-from validation.validation import validateUN, infer, infer_styles, infer_from_style, evaluate_style, top_average_evaluate
+from validation.validation import validateUN, infer, infer_styles, infer_from_style, evaluate_style, top_average_evaluate, make_loss_dictionary
 
 from tools.utils import *
 from datasets.datasetgetter import get_dataset, get_dataset_for_inference
@@ -132,6 +132,8 @@ def main():
     parser.add_argument('--evaluate_style', action='store_true',
                         help='Call for Style Evaluation only mode')
     parser.add_argument('--evaluate_average_style', action='store_true',
+                        help='Call for Style Evaluation only mode')
+    parser.add_argument('--make_loss_dictionary', action='store_true',
                         help='Call for Style Evaluation only mode')
     parser.add_argument('--gpu', default=None, type=str,
                         help='GPU id to use.')
@@ -324,6 +326,10 @@ def main_worker(args):
     if args.evaluate_average_style:
         print('EVALUATE AVERAGE STYLE')
         top_average_evaluate(networks, args)
+        return
+    if args.make_loss_dictionary:
+        print('EVALUATE MAKE LOSS DICTIONARY')
+        make_loss_dictionary(networks, args)
         return
 
     if args.infer:
