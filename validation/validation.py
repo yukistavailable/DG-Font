@@ -796,13 +796,11 @@ def make_loss_dictionary(networks, args):
         return style_latent_vector / len(style_chars)
 
     style_fonts = [
-        'BIZUDPMincho-Regular.ttf',
-        '851H-kktt_004.ttf',
-        'JP_NotoSerifJP-Regular.otf',
-        '03スマートフォントUI.otf',
-        'Corporate-Logo-Rounded-Bold-ver3.otf',
-        '851CHIKARA-DZUYOKU_kanaA_004.ttf',
-        'JK-Maru-Gothic-M.otf',
+        '851MkPOP_101.ttf',
+        'GenEiAntiqueNv5-M.ttf',
+        'JP_ReggaeOne-Regular.ttf',
+        'JP_OtsutomeFont_Ver3.ttf',
+        'JP_Ronde-B_square.otf',
     ]
     style_font_paths = [
         os.path.join(
@@ -822,8 +820,7 @@ def make_loss_dictionary(networks, args):
         target_tensor = chars_to_tensor(sampled_content_chars, style_font)
 
         all_loss_info = {}
-        chars = '最高'
-        for char in tqdm(chars):
+        for char in tqdm(kanji_chars):
             style_latent_vector = chars_to_style_latent_vector(
                 [char], style_font)
             generated_tensor = generate_chars_with_style(
