@@ -101,16 +101,25 @@ def calc_recon_loss(predict, target):
 
 def calc_style_norm(style):
     style_mean = torch.mean(style, dim=0)
-    style_mean_norm = torch.norm(style_mean)
+    # style_mean_norm = torch.norm(style_mean)
     norm_sum = 0
     for i in range(style.shape[0]):
         norm_sum += torch.norm(style[i] - style_mean)
-    return norm_sum / style_mean_norm
+    # return norm_sum / style_mean_norm
+    return norm_sum
 
 
 # calculate the mean of the variances of each line
 def calc_variance(x):
     return torch.mean(torch.var(x, dim=0))
+
+
+def calc_content_norm(content):
+    content_mean = torch.mean(content, dim=0)
+    norm_sum = 0
+    for i in range(content.shape[0]):
+        norm_sum += torch.norm(content[i] - content_mean)
+    return norm_sum
 
 
 def calc_contrastive_loss(args, query, key, queue, temp=0.07):

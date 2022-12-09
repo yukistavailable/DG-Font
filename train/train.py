@@ -6,7 +6,8 @@ import torch.utils.data
 import torch.utils.data.distributed
 from tools.utils import *
 from tools.ops import compute_grad_gp, update_average, copy_norm_params, queue_data, dequeue_data, \
-    average_gradients, calc_adv_loss, calc_contrastive_loss, calc_recon_loss, calc_style_norm, calc_variance
+    average_gradients, calc_adv_loss, calc_contrastive_loss, calc_recon_loss, calc_style_norm, calc_variance, \
+    calc_content_norm
 
 
 def trainGAN(data_loader, networks, opts, epoch, args, additional):
@@ -385,7 +386,7 @@ def train_fixed_content(
             if content_y.eq(content_y[0]).all():
                 b, c, h, w = c_src.shape
                 tmp_c_src = c_src.view(b, c * h * w)
-                g_content_norm = calc_style_norm(tmp_c_src)
+                g_content_norm = calc_content_norm(tmp_c_src)
                 content_norm_count += 1
                 content_norm_amount += g_content_norm.item()
 
