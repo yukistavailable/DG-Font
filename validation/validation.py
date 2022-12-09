@@ -49,7 +49,7 @@ def infer_same(full_dataset, networks, args):
             drop_last=False)
         it = iter(dl)
         result = None
-        for imgs, _ in it:
+        for imgs, _, _ in it:
             imgs = imgs.to(args.device)
             styles = C.moco(imgs)
 
@@ -99,7 +99,7 @@ def infer(
         content_it = iter(content_dl)
         result = None
         for (
-                style_imgs, _), (content_imgs, _) in zip(
+                style_imgs, _, _), (content_imgs, _, _) in zip(
                 style_it, content_it):
             style_imgs = style_imgs.to(args.device)
             content_imgs = content_imgs.to(args.device)
@@ -164,7 +164,7 @@ def infer_styles(
         style_it = iter(style_dl)
 
         result = None
-        for (style_imgs, _) in style_it:
+        for (style_imgs, _, _) in style_it:
             style_imgs = style_imgs.to(args.device)
             styles = C.moco(style_imgs)
 
@@ -226,7 +226,7 @@ def infer_from_style(
                 styles = torch.cat((styles, style), 0)
 
         result = None
-        for (content_imgs, _) in content_it:
+        for (content_imgs, _, _) in content_it:
             content_imgs = content_imgs.to(args.device)
 
             contents, skip1, skip2 = G.cnt_encoder(content_imgs)
@@ -323,7 +323,7 @@ def validateUN(full_dataset, networks, args, epoch=999):
             tmp_iter = iter(tmp_dl)
             tmp_sample = None
             for sample_idx in range(len(tmp_iter)):
-                imgs, _ = next(tmp_iter)
+                imgs, _, _ = next(tmp_iter)
                 x_ = imgs
                 if tmp_sample is None:
                     tmp_sample = x_.clone()

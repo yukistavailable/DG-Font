@@ -357,6 +357,7 @@ class ImageFolderRemap(DatasetFolder):
         # The type of self.samples: [(img_path, class_idx), (img_path,
         # class_idx),...]
         path, target = self.samples[index]
+        cnt_idx = int(os.path.splitext(os.path.basename(path))[0])
         sample = self.loader(path, self.input_ch)
         if self.transform is not None:
             sample = self.transform(sample)
@@ -369,7 +370,7 @@ class ImageFolderRemap(DatasetFolder):
         # The type of sample is PIL.Image
         # The type of target is int
         # target is the target font id
-        return sample, target
+        return sample, target, cnt_idx
 
 
 class CrossdomainFolder(data.Dataset):

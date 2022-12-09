@@ -86,6 +86,21 @@ def main():
         type=int,
         help='Input image size')
     parser.add_argument(
+        '--cnt_img_size',
+        default=20,
+        type=int,
+        help='Content size')
+    parser.add_argument(
+        '--cnt_ch',
+        default=256,
+        type=int,
+        help='Content channels')
+    parser.add_argument(
+        '--cnt_num',
+        default=2136,
+        type=int,
+        help='The number of kind of characters')
+    parser.add_argument(
         '--dims',
         default=2048,
         type=int,
@@ -117,6 +132,8 @@ def main():
                         help='Call for inference only mode')
     parser.add_argument('--content_norm', action='store_true',
                         help='Call for inference only mode')
+    parser.add_argument('--content_discriminator', action='store_true',
+                        help='Add content discriminator')
     parser.add_argument(
         '--content_font_id',
         required=False,
@@ -169,6 +186,8 @@ def main():
                         help='Coefficient of Style vector rec. loss of G')
     parser.add_argument('--w_sty_var', default=0.1, type=float,
                         help='Coefficient of Style vector rec. loss of G')
+    parser.add_argument('--w_cd', default=0.1, type=float,
+                        help='Weight of content discriminator')
 
     parser.add_argument(
         '--w_off',
@@ -431,6 +450,11 @@ def build_model(args):
             args.img_size,
             num_domains=args.output_k,
             input_ch=args.input_ch)
+        if args.content_discriminator:
+            networks['CD'] = Discriminator(
+                args.cnt_img_size,
+                num_domains=args.cnt_num,
+                input_ch=args.cnt_ch)
     if 'G' in args.to_train:
         networks['G'] = Generator(
             args.img_size,
@@ -465,6 +489,9 @@ def build_model(args):
     if 'D' in args.to_train:
         opts['D'] = torch.optim.RMSprop(
             networks['D'].parameters(), 1e-4, weight_decay=0.0001)
+        if args.content_discriminator:
+            opts['CD'] = torch.optim.RMSprop(
+                networks['CD'].parameters(), 1e-4, weight_decay=0.0001)
     if 'G' in args.to_train:
         opts['G'] = torch.optim.RMSprop(
             networks['G'].parameters(), 1e-4, weight_decay=0.0001)

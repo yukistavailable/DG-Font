@@ -53,10 +53,10 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
 
     for i in t_train:
         try:
-            imgs, y_org = next(train_it)
+            imgs, y_org, cnt_idx = next(train_it)
         except BaseException:
             train_it = iter(data_loader)
-            imgs, y_org = next(train_it)
+            imgs, y_org, cnt_idx = next(train_it)
 
         # imgs.shape is [batch_size, 3, img_size, img_size]
         # y_org is [class_idx, class_idx, ..., class_idx] and the length is
@@ -242,6 +242,12 @@ def train_fixed_content(
     C_EMA.train()
     G_EMA.train()
 
+    is_cd = args.content_discriminator
+    if is_cd:
+        Cd = networks['CD']
+        cd_opt = opts['CD']
+        Cd.train()
+
     logger = additional['logger']
 
     style_norm_count = 0
@@ -258,40 +264,32 @@ def train_fixed_content(
 
     for i in t_train:
         try:
-            styles, style_y = next(style_train_it)
+            styles, style_y, sty_cnt_idx = next(style_train_it)
             if len(styles) < args.batch_size:
                 style_train_it = iter(style_data_loader)
-                styles, style_y = next(style_train_it)
+                styles, style_y, sty_cnt_idx = next(style_train_it)
         except BaseException:
             style_train_it = iter(style_data_loader)
-            styles, style_y = next(style_train_it)
+            styles, style_y, sty_cnt_idx = next(style_train_it)
 
         if args.content_norm:
             try:
-                contents, content_y = next(content_train_it)
+                contents, content_y, cnt_cnt_idx = next(content_train_it)
             except BaseException:
                 content_train_it = iter(content_data_loader)
-                contents, content_y = next(content_train_it)
+                contents, content_y, cnt_cnt_idx = next(content_train_it)
             assert len(contents) == 1
-            # print("---------------------------------")
-            # print(contents.shape)
-            # print(content_y.shape)
-            # print("---------------------------------")
             contents = torch.cat([contents.clone()] * args.batch_size, dim=0)
             content_y = torch.cat([content_y.clone()] * args.batch_size, dim=0)
-            # print("---------------------------------")
-            # print(contents.shape)
-            # print(content_y.shape)
-            # print("---------------------------------")
         else:
             try:
-                contents, content_y = next(content_train_it)
+                contents, content_y, cnt_cnt_idx = next(content_train_it)
                 if len(contents) < args.batch_size:
                     content_train_it = iter(content_data_loader)
-                    contents, content_y = next(content_train_it)
+                    contents, content_y, cnt_cnt_idx = next(content_train_it)
             except BaseException:
                 content_train_it = iter(content_data_loader)
-                contents, content_y = next(content_train_it)
+                contents, content_y, cnt_cnt_idx = next(content_train_it)
 
         # imgs.shape is [batch_size, input_ch, img_size, img_size]
         # y_org is [class_idx, class_idx, ..., class_idx] and the length is
@@ -390,19 +388,33 @@ def train_fixed_content(
                 content_norm_count += 1
                 content_norm_amount += g_content_norm.item()
 
+        # Train Content Discriminator
+        cd_loss = 0
+        if is_cd:
+            c_ref_src, _, _ = G.cnt_encoder(x_ref)
+            c_sty_cnt_logit = Cd(c_ref_src, sty_cnt_idx)
+            c_cnt_logit = Cd(c_src, cnt_cnt_idx)
+            c_sty_logit = Cd(c_x_fake, cnt_cnt_idx)
+            cd_loss = calc_adv_loss(c_sty_cnt_logit, 'g') + \
+                calc_adv_loss(c_cnt_logit, 'g') + \
+                calc_adv_loss(c_sty_logit, 'g')
+            cd_loss.backward()
+
         g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + args.w_rec * \
             g_conrec + args.w_off * offset_loss + args.w_rec * g_styrec + \
             args.w_sty_norm * g_style_norm + args.w_cnt_norm * g_content_norm + \
-            args.w_sty_var * g_style_var
+            args.w_sty_var * g_style_var + args.w_cd * cd_loss
 
         g_opt.zero_grad()
         c_opt.zero_grad()
+        cd_opt.zero_grad()
         g_loss.backward()
         # if args.distributed:
         #     average_gradients(G)
         #     average_gradients(C)
         c_opt.step()
         g_opt.step()
+        cd_opt.step()
 
         ##################
         # END Train GANs #
