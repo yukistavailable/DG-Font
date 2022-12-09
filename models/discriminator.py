@@ -22,6 +22,10 @@ class Discriminator(nn.Module):
             max_conv_dim=1024,
             input_ch=3):
         super(Discriminator, self).__init__()
+        """
+        num_domains: number of fonts
+        """
+
         dim_in = 64 if image_size < 256 else 32
         blocks = []
         blocks += [nn.Conv2d(input_ch, dim_in, 3, 1, 1)]
@@ -34,7 +38,10 @@ class Discriminator(nn.Module):
             dim_in = dim_out
 
         blocks += [nn.LeakyReLU(0.2)]
-        blocks += [nn.Conv2d(dim_out, dim_out, 4, 1, 0)]
+
+        last_kernel = int(image_size / 2 ** repeat_num)
+        blocks += [nn.Conv2d(dim_out, dim_out, last_kernel, 1, 0)]
+
         blocks += [nn.LeakyReLU(0.2)]
         blocks += [nn.Conv2d(dim_out, num_domains, 1, 1, 0)]
         self.main = nn.Sequential(*blocks)
@@ -44,15 +51,19 @@ class Discriminator(nn.Module):
     def forward(self, x, y):
         """
         Inputs:
-            - x: images of shape (batch, 3, image_size, image_size).
+            - x: images of shape (batch, input_ch, image_size, image_size).
             - y: domain indices of shape (batch).
         Output:
             - out: logits of shape (batch).
+            - feat: features of shape (batch, num_domains, 1, 1).
         """
         out = self.main(x)
         feat = out
-        # (batch, num_domains)
+
+        # (batch, num_domains*1*1)
         out = out.view(out.size(0), -1)
+
+        # idx = tensor([1,2,3,4,...,y.size(0)-1])
         idx = torch.LongTensor(range(y.size(0))).to(y.device)
         out = out[idx, y]                                         # (batch)
         return out, feat
