@@ -407,14 +407,16 @@ def train_fixed_content(
 
         g_opt.zero_grad()
         c_opt.zero_grad()
-        cd_opt.zero_grad()
+        if is_cd:
+            cd_opt.zero_grad()
         g_loss.backward()
         # if args.distributed:
         #     average_gradients(G)
         #     average_gradients(C)
         c_opt.step()
         g_opt.step()
-        cd_opt.step()
+        if is_cd:
+            cd_opt.step()
 
         ##################
         # END Train GANs #
