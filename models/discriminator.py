@@ -11,6 +11,8 @@ try:
 except BaseException:
     from blocks import FRN, ActFirstResBlk
 
+cd_softmax = torch.nn.Softmax(dim=1)
+
 
 class Discriminator(nn.Module):
     """Discriminator: (image x, domain y) -> (logit out)."""
@@ -58,15 +60,15 @@ class Discriminator(nn.Module):
             - feat: features of shape (batch, num_domains, 1, 1).
         """
         out = self.main(x)
-        feat = out
 
         # (batch, num_domains*1*1)
         out = out.view(out.size(0), -1)
 
         # idx = tensor([1,2,3,4,...,y.size(0)-1])
         idx = torch.LongTensor(range(y.size(0))).to(y.device)
+        softmaxed_out = cd_softmax(out)[idx, y].to(y.device)
         out = out[idx, y]                                         # (batch)
-        return out, feat
+        return out, softmaxed_out
 
     def _initialize_weights(self, mode='fan_in'):
         for m in self.modules():

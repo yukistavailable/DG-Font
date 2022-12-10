@@ -392,9 +392,9 @@ def train_fixed_content(
         cd_loss = 0
         if is_cd:
             c_ref_src, _, _ = G.cnt_encoder(x_ref)
-            c_sty_cnt_logit, _ = Cd(c_ref_src, sty_cnt_idx)
-            c_cnt_logit, _ = Cd(c_src, cnt_cnt_idx)
-            c_sty_logit, _ = Cd(c_x_fake, cnt_cnt_idx)
+            _, c_sty_cnt_logit = Cd(c_ref_src, sty_cnt_idx)
+            _, c_cnt_logit = Cd(c_src, cnt_cnt_idx)
+            _, c_sty_logit = Cd(c_x_fake, cnt_cnt_idx)
             cd_loss = calc_adv_loss(c_sty_cnt_logit, 'g') + \
                 calc_adv_loss(c_cnt_logit, 'g') + \
                 calc_adv_loss(c_sty_logit, 'g')
