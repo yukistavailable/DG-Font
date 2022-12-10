@@ -232,6 +232,7 @@ def main():
     print("______________________________________")
     print(f'Style Norm: {args.style_norm}')
     print(f'Content Norm: {args.content_norm}')
+    print(f'Content Discriminator: {args.content_discriminator}')
     print("______________________________________")
 
     print("PYTORCH VERSION", torch.__version__)
