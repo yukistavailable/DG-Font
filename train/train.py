@@ -11,7 +11,6 @@ from tools.ops import compute_grad_gp, update_average, copy_norm_params, queue_d
 
 
 def trainGAN(data_loader, networks, opts, epoch, args, additional):
-    print('Start trainingGAN')
     # avg meter
     d_losses = AverageMeter()
     d_advs = AverageMeter()
@@ -57,9 +56,6 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
     t_train = trange(0, args.iters, initial=0, total=args.iters)
 
     for i in t_train:
-        print("----------------------------")
-        print("start")
-        print("----------------------------")
         try:
             imgs, y_org, cnt_idx = next(train_it)
         except BaseException:
@@ -186,9 +182,6 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
 
         torch.cuda.synchronize()
 
-        print("----------------------------")
-        print(g_loss)
-        print("----------------------------")
         with torch.no_grad():
             if epoch >= args.separated:
                 d_losses.update(d_loss.item(), x_org.size(0))
