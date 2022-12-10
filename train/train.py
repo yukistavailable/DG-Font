@@ -25,24 +25,28 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
 
     # set nets
     D = networks['D']
-    # G = networks['G'].module
-    # C = networks['C'].module
-    # G_EMA = networks['G_EMA'].module
-    # C_EMA = networks['C_EMA'].module
     G = networks['G']
     C = networks['C']
     G_EMA = networks['G_EMA']
     C_EMA = networks['C_EMA']
+
     # set opts
     d_opt = opts['D']
     g_opt = opts['G']
     c_opt = opts['C']
+
     # switch to train mode
     D.train()
     G.train()
     C.train()
     C_EMA.train()
     G_EMA.train()
+
+    is_cd = args.content_discriminator
+    if is_cd:
+        Cd = networks['CD']
+        cd_opt = opts['CD']
+        Cd.train()
 
     logger = additional['logger']
 
@@ -72,10 +76,12 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
         y_org = y_org.to(args.device)
         x_ref_idx = x_ref_idx.to(args.device)
 
-        x_ref = x_org.clone()
-        x_ref = x_ref[x_ref_idx]
         # x_ref はx_orgをランダムに入れ替えたもの
         # x_ref is characters with the target font
+        x_ref = x_org.clone()
+        x_ref = x_ref[x_ref_idx]
+        cnt_idx_ref = cnt_idx.clone()
+        cnt_idx_ref = cnt_idx_ref[x_ref_idx]
 
         training_mode = 'GAN'
 
@@ -142,8 +148,19 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
         style_x_fake = C.moco(x_fake)
         g_styrec = calc_recon_loss(style_x_fake, s_ref)
 
-        g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + args.w_rec * \
-            g_conrec + args.w_off * offset_loss + args.w_sty * g_styrec
+        # Train Content Discriminator
+        cd_loss = 0
+        if is_cd:
+            c_ref_src, _, _ = G.cnt_encoder(x_ref)
+            _, c_sty_cnt_logit = Cd(c_ref_src, cnt_idx_ref)
+            _, c_cnt_logit = Cd(c_src, cnt_idx)
+            _, c_sty_logit = Cd(c_x_fake, cnt_idx)
+            cd_loss = calc_adv_loss(c_sty_cnt_logit, 'g') + \
+                calc_adv_loss(c_cnt_logit, 'g') + \
+                calc_adv_loss(c_sty_logit, 'g')
+
+        g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + args.w_rec * g_conrec + \
+            args.w_off * offset_loss + args.w_sty * g_styrec + args.w_cd * cd_loss
 
         g_opt.zero_grad()
         c_opt.zero_grad()
