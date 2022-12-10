@@ -11,6 +11,7 @@ from tools.ops import compute_grad_gp, update_average, copy_norm_params, queue_d
 
 
 def trainGAN(data_loader, networks, opts, epoch, args, additional):
+    print('Start trainingGAN')
     # avg meter
     d_losses = AverageMeter()
     d_advs = AverageMeter()
