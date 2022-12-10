@@ -56,6 +56,9 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
     t_train = trange(0, args.iters, initial=0, total=args.iters)
 
     for i in t_train:
+        print("----------------------------")
+        print("start")
+        print("----------------------------")
         try:
             imgs, y_org, cnt_idx = next(train_it)
         except BaseException:
