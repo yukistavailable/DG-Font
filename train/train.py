@@ -398,7 +398,8 @@ def train_fixed_content(
             cd_loss = calc_adv_loss(c_sty_cnt_logit, 'g') + \
                 calc_adv_loss(c_cnt_logit, 'g') + \
                 calc_adv_loss(c_sty_logit, 'g')
-            cd_loss.backward()
+            # cd_loss = calc_adv_loss(c_sty_cnt_logit, 'g') + \
+            #           calc_adv_loss(c_cnt_logit, 'g')
 
         g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + args.w_rec * \
             g_conrec + args.w_off * offset_loss + args.w_rec * g_styrec + \
