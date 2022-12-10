@@ -182,6 +182,9 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
 
         torch.cuda.synchronize()
 
+        print("----------------------------")
+        print(g_loss)
+        print("----------------------------")
         with torch.no_grad():
             if epoch >= args.separated:
                 d_losses.update(d_loss.item(), x_org.size(0))
