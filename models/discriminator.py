@@ -66,7 +66,7 @@ class Discriminator(nn.Module):
 
         # idx = tensor([1,2,3,4,...,y.size(0)-1])
         idx = torch.LongTensor(range(y.size(0))).to(y.device)
-        softmaxed_out = cd_softmax(out)[idx, y].to(y.device)
+        softmaxed_out = cd_softmax(out)[idx, y]
         out = out[idx, y]                                         # (batch)
         return out, softmaxed_out
 
