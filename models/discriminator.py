@@ -22,7 +22,7 @@ class Discriminator(nn.Module):
             image_size=256,
             num_domains=2,
             max_conv_dim=1024,
-            input_ch=3):
+            input_ch=3, last_kernel=True):
         super(Discriminator, self).__init__()
         """
         num_domains: number of fonts
@@ -41,7 +41,10 @@ class Discriminator(nn.Module):
 
         blocks += [nn.LeakyReLU(0.2)]
 
-        last_kernel = int(image_size / 2 ** repeat_num)
+        if last_kernel:
+            last_kernel = int(image_size / 2 ** repeat_num)
+        else:
+            last_kernel = 4
         blocks += [nn.Conv2d(dim_out, dim_out, last_kernel, 1, 0)]
 
         blocks += [nn.LeakyReLU(0.2)]

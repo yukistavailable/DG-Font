@@ -134,6 +134,8 @@ def main():
                         help='Call for inference only mode')
     parser.add_argument('--content_discriminator', action='store_true',
                         help='Add content discriminator')
+    parser.add_argument('--last_kernel', action='store_false',
+                        help='Does apply dynamic last_kernel to Discriminator')
     parser.add_argument(
         '--content_font_id',
         required=False,
@@ -450,12 +452,16 @@ def build_model(args):
         networks['D'] = Discriminator(
             args.img_size,
             num_domains=args.output_k,
-            input_ch=args.input_ch)
+            input_ch=args.input_ch,
+            last_kernel=args.last_kernel,
+        )
         if args.content_discriminator:
             networks['CD'] = Discriminator(
                 args.cnt_img_size,
                 num_domains=args.cnt_num,
-                input_ch=args.cnt_ch)
+                input_ch=args.cnt_ch,
+                last_kernel=args.last_kernel,
+            )
     if 'G' in args.to_train:
         networks['G'] = Generator(
             args.img_size,
