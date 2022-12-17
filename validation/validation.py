@@ -242,7 +242,9 @@ def infer_from_style(
 def infer_contents_with_tensor(
         character_tensor,
         networks,
-        args):
+        args,
+        skip=False
+):
     # set nets
     G = networks['G']
     G_EMA = networks['G_EMA']
@@ -253,8 +255,10 @@ def infer_contents_with_tensor(
 
     with torch.no_grad():
         character_tensor = character_tensor.to(args.device)
-        contents, _, _ = G.cnt_encoder(
+        contents, skip1, skip2 = G.cnt_encoder(
             character_tensor)
+    if skip:
+        return contents, skip1, skip2
     return contents
 
 
@@ -287,6 +291,41 @@ def infer_from_style_with_tensor(
         contents, skip1, skip2 = G.cnt_encoder(content_tensor)
         x_fake, _ = G.decode(
             contents, styles, skip1, skip2)
+    return x_fake
+
+
+def infer_from_style_and_content_with_tensor(
+        style_tensor,
+        content_tensor,
+        skip1,
+        skip2,
+        networks,
+        args):
+    # set nets
+    G = networks['G']
+    G_EMA = networks['G_EMA']
+
+    # switch to train mode
+    G.eval()
+    G_EMA.eval()
+
+    with torch.no_grad():
+        styles = None
+        style = style_tensor.to(args.device)
+        style = style.unsqueeze(0)
+
+        for _ in range(len(content_tensor)):
+            if styles is None:
+                styles = style.clone()
+            else:
+                styles = torch.cat((styles, style), 0)
+
+        content_tensor = content_tensor.to(args.device)
+        skip1 = skip1.to(args.device)
+        skip2 = skip2.to(args.device)
+
+        x_fake, _ = G.decode(
+            content_tensor, styles, skip1, skip2)
     return x_fake
 
 
