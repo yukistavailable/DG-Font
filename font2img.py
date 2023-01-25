@@ -46,7 +46,8 @@ try:
 finally:
     file_object.close()
 
-print('Characters: ', characters[92:])
+kanji_chars = characters[92:]
+print('Characters: ', kanji_chars)
 
 
 def draw_single_char(ch, font, canvas_size, x_offset, y_offset):
@@ -58,11 +59,13 @@ def draw_single_char(ch, font, canvas_size, x_offset, y_offset):
     return img
 
 
-_img = Image.new("RGB", (args.img_size, args.img_size), (255, 255, 255))
-white_space_hashes = [hash(_img.tobytes())]
-
-
-def draw_example(ch, src_font, canvas_size, x_offset, y_offset):
+def draw_example(
+        ch,
+        src_font,
+        canvas_size,
+        x_offset,
+        y_offset,
+        white_space_hashes):
     src_img = draw_single_char(ch, src_font, canvas_size, x_offset, y_offset)
     dst_hash = hash(src_img.tobytes())
     if dst_hash in white_space_hashes:
@@ -70,34 +73,64 @@ def draw_example(ch, src_font, canvas_size, x_offset, y_offset):
     return src_img
 
 
+def char_to_hash(ch, font, canvas_size, x_offset, y_offset):
+    img = draw_single_char(ch, font, canvas_size, x_offset, y_offset)
+    return hash(img.tobytes())
+
+
 data_dir = args.ttf_path
 data_root = pathlib.Path(data_dir)
 print(f'Font Data Root: {data_root}')
 
-all_image_paths = list(data_root.glob('*.*tf*'))[args.start_font:]
-all_image_paths = sorted([str(path) for path in all_image_paths])
-print(f'{len(all_image_paths)} fonts are found.')
-# for i in range(len(all_image_paths)):
-#     # print(all_image_paths[i])
-#     if 'JP_NotoSerifJP-Regular.otf' in all_image_paths[i]:
-#         print(i)
+all_font_paths = list(data_root.glob('*.*tf*'))[args.start_font:]
+all_font_paths = sorted([str(path) for path in all_font_paths])
+print(f'{len(all_font_paths)} fonts are found.')
+for i in range(len(all_font_paths)):
+    # print(all_image_paths[i])
+    if 'ipaexg.ttf' in all_font_paths[i]:
+        print(i)
+
+print(all_font_paths[-1])
+
+# all_hashes = []
+# _img = Image.new("RGB", (args.img_size, args.img_size), (255, 255, 255))
+# white_space_hashes = [hash(_img.tobytes())]
 
 
-print(len(all_image_paths))
-
-seq = list()
-for (label, item) in enumerate(tqdm(all_image_paths)):
-    label += args.start_font
-    src_font = ImageFont.truetype(item, size=args.chara_size)
-    for (cnt, chara) in enumerate(characters[92:]):
-        img = draw_example(
-            chara,
-            src_font,
-            args.img_size,
-            (args.img_size - args.chara_size) / 2,
-            (args.img_size - args.chara_size) / 2)
-        if img is not None:
-            path_full = os.path.join(args.save_path, 'id_%d' % label)
-            if not os.path.exists(path_full):
-                os.mkdir(path_full)
-            img.save(os.path.join(path_full, "%04d.png" % (cnt)))
+# x_offset = (args.img_size - args.chara_size) / 2
+# y_offset = (args.img_size - args.chara_size) / 2
+#
+# white_space_hash_sets = []
+# # 空白文字を取得
+# print(len(all_font_paths))
+# for font_path in tqdm(all_font_paths):
+#     tmp_white_space_hashes = set()
+#     tmp_all_hashes = set()
+#     font = ImageFont.truetype(font_path, size=args.chara_size)
+#     for ch in kanji_chars:
+#         tmp_hash = char_to_hash(ch, font, args.img_size, x_offset, y_offset)
+#         if tmp_hash in tmp_all_hashes:
+#             tmp_white_space_hashes.add(tmp_hash)
+#         else:
+#             tmp_all_hashes.add(tmp_hash)
+#     white_space_hash_sets.append(tmp_white_space_hashes)
+#
+# print(len(white_space_hash_sets))
+# print('Save Images')
+# seq = list()
+# for (label, item) in enumerate(tqdm(all_font_paths)):
+#     label += args.start_font
+#     src_font = ImageFont.truetype(item, size=args.chara_size)
+#     tmp_white_space_hashes = white_space_hash_sets[label]
+#     for (cnt, chara) in enumerate(characters[92:]):
+#         img = draw_example(
+#             chara,
+#             src_font,
+#             args.img_size,
+#             x_offset,
+#             y_offset, tmp_white_space_hashes)
+#         if img is not None:
+#             path_full = os.path.join(args.save_path, 'id_%d' % label)
+#             if not os.path.exists(path_full):
+#                 os.mkdir(path_full)
+#             img.save(os.path.join(path_full, "%04d.png" % (cnt)))

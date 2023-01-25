@@ -182,7 +182,7 @@ def main():
                         help='Coefficient of Adv. loss of G')
     parser.add_argument('--w_vec', default=0.01, type=float,
                         help='Coefficient of Style vector rec. loss of G')
-    parser.add_argument('--w_sty_norm', default=0.1, type=float,
+    parser.add_argument('--w_sty_norm', default=0.00000000000001, type=float,
                         help='Coefficient of Style vector rec. loss of G')
     parser.add_argument('--w_cnt_norm', default=0.1, type=float,
                         help='Coefficient of Style vector rec. loss of G')
@@ -213,6 +213,11 @@ def main():
         nargs='*',
         type=str,
         help='Image Paths for inference')
+    parser.add_argument(
+        '--lr',
+        default=1e-4,
+        type=float,
+        help='Learning Rate')
 
     ####################
     # Default settings #
@@ -491,17 +496,17 @@ def build_model(args):
 
     if 'C' in args.to_train:
         opts['C'] = torch.optim.Adam(
-            networks['C'].parameters(), 1e-4, weight_decay=0.001)
+            networks['C'].parameters(), args.lr, weight_decay=0.001)
         networks['C_EMA'].load_state_dict(networks['C'].state_dict())
     if 'D' in args.to_train:
         opts['D'] = torch.optim.RMSprop(
-            networks['D'].parameters(), 1e-4, weight_decay=0.0001)
+            networks['D'].parameters(), args.lr, weight_decay=0.0001)
         if args.content_discriminator:
             opts['CD'] = torch.optim.RMSprop(
-                networks['CD'].parameters(), 1e-4, weight_decay=0.0001)
+                networks['CD'].parameters(), args.lr, weight_decay=0.0001)
     if 'G' in args.to_train:
         opts['G'] = torch.optim.RMSprop(
-            networks['G'].parameters(), 1e-4, weight_decay=0.0001)
+            networks['G'].parameters(), args.lr, weight_decay=0.0001)
 
     return networks, opts
 
