@@ -18,7 +18,7 @@ from models.generator import Generator as Generator
 from models.discriminator import Discriminator as Discriminator
 from models.guidingNet import GuidingNet
 
-from train.train import trainGAN, train_fixed_content
+from train.train import trainGAN, train_fixed_content, train_fixed_content_with_style_attraction
 
 from validation.validation import validateUN, infer, infer_styles, infer_from_style, evaluate_style, top_average_evaluate, make_loss_dictionary
 
@@ -417,9 +417,15 @@ def main_worker(args):
 
         if args.fixed_content_font:
             assert content_loader is not None
-            train_fixed_content(
-                train_loader, content_loader, networks, opts, epoch, args, {
-                    'logger': logger})
+
+            if args.style_attraction:
+                train_fixed_content_with_style_attraction(
+                    train_loader, content_loader, networks, opts, epoch, args, {
+                        'logger': logger})
+            else:
+                train_fixed_content(
+                    train_loader, content_loader, networks, opts, epoch, args, {
+                        'logger': logger})
         else:
             trainGAN(train_loader, networks, opts,
                      epoch, args, {'logger': logger})
