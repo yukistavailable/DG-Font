@@ -129,7 +129,9 @@ def main():
     parser.add_argument('--fixed_content_font', action='store_true',
                         help='Call for inference only mode')
     parser.add_argument('--style_norm', action='store_true',
-                        help='Call for inference only mode')
+                        help='Deprecated. Call for inference only mode')
+    parser.add_argument('--style_attraction', action='store_true',
+                        help='Call for style attraction')
     parser.add_argument('--content_norm', action='store_true',
                         help='Call for inference only mode')
     parser.add_argument('--content_discriminator', action='store_true',
@@ -374,26 +376,26 @@ def main_worker(args):
     logger = SummaryWriter(args.event_dir)
 
     # get dataset and data loader
-    train_dataset, val_dataset, content_dataset = get_dataset(args)
+    train_dataset, content_dataset = get_dataset(args)
 
     args.shuffle = True
     if args.style_norm:
         args.shuffle = False
 
-    # All the test is done in the training - do not need to call
-    if args.validation:
-        full_dataset = train_dataset['FULL']
-        validateUN(full_dataset, networks, args, 999)
-        return
-
-    train_loader, val_loader = get_loader(
-        args, {'train': train_dataset, 'val': val_dataset}, shuffle=args.shuffle)
+    train_loader = get_loader(
+        args,
+        train_dataset,
+        shuffle=args.shuffle,
+        is_style_attraction=args.style_attraction)
 
     content_loader = None
     if content_dataset is not None:
-        content_loader, _ = get_loader(
-            args, {
-                'train': content_dataset, 'val': content_dataset}, shuffle=True, is_content=True)
+        content_loader = get_loader(
+            args,
+            content_dataset,
+            shuffle=True,
+            is_content=True,
+            is_style_attraction=False)
 
     # For saving the model
     record_txt = open(os.path.join(args.log_dir, "record.txt"), "a+")
@@ -421,9 +423,6 @@ def main_worker(args):
         else:
             trainGAN(train_loader, networks, opts,
                      epoch, args, {'logger': logger})
-
-        # full_dataset = train_dataset['FULL']
-        # validateUN(full_dataset, networks, epoch, args, {'logger': logger})
 
         if (epoch + 1) % (args.check_point_step) == 0:
             save_model(args, epoch, networks, opts)
@@ -547,13 +546,14 @@ def load_model(args, networks, opts):
               .format(load_file, checkpoint['epoch']))
 
 
-def get_loader(args, dataset, shuffle=True, is_content=False):
-    train_dataset = dataset['train']
-    val_dataset = dataset['val']
-
-    print(len(val_dataset))
-
-    train_dataset_ = train_dataset['TRAIN']
+def get_loader(
+        args,
+        dataset,
+        shuffle=True,
+        is_content=False,
+        is_style_attraction=False):
+    train_dataset = dataset
+    train_dataset_ = train_dataset
 
     if args.content_norm and is_content:
         train_loader = torch.utils.data.DataLoader(
@@ -564,6 +564,16 @@ def get_loader(args, dataset, shuffle=True, is_content=False):
             pin_memory=True,
             sampler=None,
             drop_last=False)
+    elif is_style_attraction:
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset_,
+            batch_size=1,
+            shuffle=shuffle,
+            num_workers=args.workers,
+            pin_memory=True,
+            sampler=None,
+            drop_last=False)
+
     else:
         train_loader = torch.utils.data.DataLoader(
             train_dataset_,
@@ -574,20 +584,20 @@ def get_loader(args, dataset, shuffle=True, is_content=False):
             sampler=None,
             drop_last=False)
 
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset,
-        batch_size=args.val_batch,
-        shuffle=shuffle,
-        num_workers=0,
-        pin_memory=True,
-        drop_last=False)
+    # val_loader = torch.utils.data.DataLoader(
+    #     val_dataset,
+    #     batch_size=args.val_batch,
+    #     shuffle=shuffle,
+    #     num_workers=0,
+    #     pin_memory=True,
+    #     drop_last=False)
+    #
+    # val_loader = {
+    #     'VAL': val_loader,
+    #     'VALSET': val_dataset,
+    #     'TRAINSET': train_dataset['FULL']}
 
-    val_loader = {
-        'VAL': val_loader,
-        'VALSET': val_dataset,
-        'TRAINSET': train_dataset['FULL']}
-
-    return train_loader, val_loader
+    return train_loader
 
 
 def save_model(args, epoch, networks, opts):

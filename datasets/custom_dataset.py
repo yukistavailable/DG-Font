@@ -7,6 +7,7 @@ import os.path
 import sys
 from io import BytesIO
 import pickle
+import torch
 
 
 def has_file_allowed_extension(filename, extensions):
@@ -36,6 +37,21 @@ def is_image_file(filename):
 
 
 def make_dataset(dir, class_to_idx, extensions):
+    """
+    Parameters
+    ----------
+    dir : str
+        path to the root of the dataset
+    class_to_idx : dict[str, int]
+        dir name and the value is index. e.g. {'id_0': 0, 'id_1': 1, ..., }
+    extensions : list[str]
+        list of allowed extensions
+
+    Returns
+    -------
+    list[(str, int)]
+        list of (image path, class index) tuples
+    """
     images = []
     dir = os.path.expanduser(dir)
     for target in sorted(class_to_idx.keys()):
@@ -371,6 +387,76 @@ class ImageFolderRemap(DatasetFolder):
         # The type of target is int
         # target is the target font id
         return sample, target, cnt_idx
+
+
+class ImageFolderRemapStyleAttraction(DatasetFolder):
+    def __init__(
+            self,
+            root,
+            transform=None,
+            target_transform=None,
+            loader=default_loader,
+            remap_table=None,
+            input_ch=3,
+            batch_size=32
+    ):
+        super(
+            ImageFolderRemapStyleAttraction,
+            self).__init__(
+            root,
+            loader,
+            IMG_EXTENSIONS,
+            transform=transform,
+            target_transform=target_transform)
+
+        # self.samplesはDatasetFolderのinit関数で定義される
+        # self.samples = make_dataset(root, class_to_idx, extensions)
+        # self.samplesは[(img_path, class_idx), (img_path, class_idx),...]の形式
+        self.imgs = self.samples
+
+        self.class_table = remap_table
+
+        # 画像のinput_chを指定する
+        self.input_ch = input_ch
+
+        self.batch_size = batch_size
+
+    def __getitem__(self, index):
+        # The type of self.samples: [(img_path, class_idx), (img_path,
+        # class_idx),...]
+
+        samples = []
+        targets = []
+        cnt_idxs = []
+
+        font_id = None
+        for i in range(self.batch_size):
+            # The type of sample is PIL.Image
+            # The type of target is int
+            # target is the target font id
+
+            path, target = self.samples[index * self.batch_size + i]
+            cnt_idx = int(os.path.splitext(os.path.basename(path))[0])
+            sample = self.loader(path, self.input_ch)
+            if self.transform is not None:
+                sample = self.transform(sample)
+            if self.target_transform is not None:
+                target = self.target_transform(target)
+            target = self.class_table[target]
+
+            if font_id is None:
+                font_id = target
+            elif font_id != target:
+                break
+
+            samples.append(sample)
+            targets.append(target)
+            cnt_idxs.append(cnt_idx)
+
+        return samples, targets, cnt_idxs
+
+    def __len__(self):
+        return int(len(self.samples) / self.batch_size)
 
 
 class CrossdomainFolder(data.Dataset):
