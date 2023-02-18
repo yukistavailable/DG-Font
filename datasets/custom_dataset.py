@@ -436,6 +436,15 @@ class ImageFolderRemapStyleAttraction(DatasetFolder):
             # target is the target font id
 
             path, target = self.samples[index * self.batch_size + i]
+
+            if font_id is None:
+                font_id = target
+            elif font_id != target:
+                for j in range(i, self.batch_size):
+                    samples.append(sample)
+                    targets.append(target)
+                    cnt_idxs.append(cnt_idx)
+                break
             cnt_idx = int(os.path.splitext(os.path.basename(path))[0])
             sample = self.loader(path, self.input_ch)
             if self.transform is not None:
@@ -443,11 +452,6 @@ class ImageFolderRemapStyleAttraction(DatasetFolder):
             if self.target_transform is not None:
                 target = self.target_transform(target)
             target = self.class_table[target]
-
-            if font_id is None:
-                font_id = target
-            elif font_id != target:
-                break
 
             samples.append(sample)
             targets.append(target)
