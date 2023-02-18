@@ -379,8 +379,8 @@ def main_worker(args):
     train_dataset, content_dataset = get_dataset(args)
 
     args.shuffle = True
-    if args.style_norm:
-        args.shuffle = False
+    # if args.style_norm:
+    #     args.shuffle = False
 
     train_loader = get_loader(
         args,

@@ -664,7 +664,7 @@ def train_fixed_content_with_style_attraction(
 
         g_style_norm = 0
         g_style_var = 0
-        if args.style_norm:
+        if args.style_attraction:
             if style_y.eq(style_y[0]).all():
                 g_style_norm = calc_style_norm(s_ref)
                 style_norm_count += 1
