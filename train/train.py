@@ -669,7 +669,7 @@ def train_fixed_content_with_style_attraction(
                 g_style_norm = calc_style_norm(s_ref)
                 style_norm_count += 1
                 style_norm_amount += g_style_norm.item()
-                g_style_var = calc_variance(s_ref)
+                # g_style_var = calc_variance(s_ref)
                 # print(
                 # f'Style Norm Loss: {style_norm_amount / style_norm_count}')
 
