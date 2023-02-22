@@ -51,7 +51,7 @@ def get_dataset(args):
             transform=transform,
             remap_table=remap_table,
             input_ch=args.input_ch,
-            batch_size=args.batch_size
+            batch_size=args.batch_size / args.font_num_per_batch,
 
         )
     else:
