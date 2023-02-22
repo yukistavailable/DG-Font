@@ -99,14 +99,15 @@ def calc_recon_loss(predict, target):
     return torch.mean(torch.abs(predict - target))
 
 
-def calc_style_norm(style):
-    style_mean = torch.mean(style, dim=0)
-    # style_mean_norm = torch.norm(style_mean)
-    norm_sum = 0
-    for i in range(style.shape[0]):
-        norm_sum += torch.norm(style[i] - style_mean)
-    # return norm_sum / style_mean_norm
-    return norm_sum
+def calc_style_norm(style, font_num_ber_batch=1):
+    result = 0
+    for i in range(font_num_ber_batch):
+        style_mean = torch.mean(style[i:-1:font_num_ber_batch], dim=0)
+        norm_sum = 0
+        for j in range(i, style.shape[0], font_num_ber_batch):
+            norm_sum += torch.norm(style[j] - style_mean)
+        result += norm_sum / (style.shape[0] / font_num_ber_batch)
+    return result
 
 
 # calculate the mean of the variances of each line

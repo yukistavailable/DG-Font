@@ -59,6 +59,11 @@ def main():
         help='Total number of iterations per epoch')
     parser.add_argument('--batch_size', default=32, type=int,
                         help='Batch size for training')
+    parser.add_argument(
+        '--font_num_per_batch',
+        default=1,
+        type=int,
+        help='Number of fonts per batch')
     parser.add_argument('--val_num', default=190, type=int,
                         help='Number of test images for each style')
     parser.add_argument(
@@ -573,7 +578,7 @@ def get_loader(
     elif is_style_attraction:
         train_loader = torch.utils.data.DataLoader(
             train_dataset_,
-            batch_size=1,
+            batch_size=args.font_num_per_batch,
             shuffle=shuffle,
             num_workers=args.workers,
             pin_memory=True,
