@@ -556,7 +556,8 @@ def train_fixed_content_with_style_attraction(
     for i in t_train:
         try:
             styles, style_y, sty_cnt_idx = next(style_train_it)
-            if len(styles) < args.batch_size:
+            if len(styles) * int((args.batch_size /
+                                  args.font_num_per_batch)) < args.batch_size:
                 style_train_it = iter(style_data_loader)
                 styles, style_y, sty_cnt_idx = next(style_train_it)
         except BaseException:
