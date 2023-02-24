@@ -665,13 +665,13 @@ def train_fixed_content_with_style_attraction(
         g_style_norm = 0
         g_style_var = 0
         if args.style_attraction:
-            if style_y.eq(style_y[0]).all():
-                g_style_norm = calc_style_norm(s_ref)
-                style_norm_count += 1
-                style_norm_amount += g_style_norm.item()
-                # g_style_var = calc_variance(s_ref)
-                # print(
-                # f'Style Norm Loss: {style_norm_amount / style_norm_count}')
+            # if style_y.eq(style_y[0]).all():
+            g_style_norm = calc_style_norm(s_ref)
+            style_norm_count += 1
+            style_norm_amount += g_style_norm.item()
+            # g_style_var = calc_variance(s_ref)
+            # print(
+            # f'Style Norm Loss: {style_norm_amount / style_norm_count}')
 
         g_content_norm = 0
         if args.content_norm:

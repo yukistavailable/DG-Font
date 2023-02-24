@@ -26,9 +26,13 @@ def get_dataset(args):
 
     normalize = transforms.Normalize(mean=mean, std=std)
 
-    transform = Compose([transforms.Resize((args.img_size, args.img_size)),
-                         transforms.ToTensor(),
-                         normalize])
+    if args.without_normalization:
+        transform = Compose([transforms.Resize((args.img_size, args.img_size)),
+                             transforms.ToTensor()])
+    else:
+        transform = Compose([transforms.Resize((args.img_size, args.img_size)),
+                             transforms.ToTensor(),
+                             normalize])
 
     class_to_use = args.att_to_use
 

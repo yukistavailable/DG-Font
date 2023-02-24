@@ -143,6 +143,8 @@ def main():
                         help='Add content discriminator')
     parser.add_argument('--last_kernel', action='store_false',
                         help='Does apply dynamic last_kernel to Discriminator')
+    parser.add_argument('--without_normalization', action='store_true',
+                        help='Does not use normalization')
     parser.add_argument(
         '--content_font_id',
         required=False,
