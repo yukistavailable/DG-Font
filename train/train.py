@@ -676,9 +676,9 @@ def train_fixed_content_with_style_attraction(
         g_content_norm = 0
         if args.content_norm:
             if content_y.eq(content_y[0]).all():
-                b, c, h, w = c_src.shape
-                tmp_c_src = c_src.view(b, c * h * w)
-                g_content_norm = calc_content_norm(tmp_c_src)
+                b, c, h, w = c_x_fake.shape
+                tmp_c_fake = c_x_fake.view(b, c * h * w)
+                g_content_norm = calc_content_norm(tmp_c_fake)
                 content_norm_count += 1
                 content_norm_amount += g_content_norm.item()
 
