@@ -1,0 +1,3 @@
+[submodule "clipfont"]
+	path = clipfont
+	url = git@github.com:yukistavailable/CLIPFont.git
