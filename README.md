@@ -56,6 +56,8 @@ Example directory hierarchy
 prepare dataset
 
     python font2img.py --ttf_path ttf_folder --chara character.txt --save_path save_folder --img_size 80 --chara_size CHARACTERSIZE
+    python font2img.py --ttf_path ../gwfonts-200 --chara roman_character.txt --save_path ../gwfonts-images-DG-Font --img_size 80 --chara_size 60
+    python font2img.py --ttf_path ../gwfonts-200 --chara roman_character.txt --save_path ../gwfonts-images-DG-Font --img_size 80 --chara_size 60 --image_base_path ../attributeData/grayscale_images/ --image_save_path ../grayscale_images_200
 
 train
 

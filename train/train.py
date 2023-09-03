@@ -1,13 +1,222 @@
 from tqdm import trange
+from PIL import Image
 import torch.nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
+from torchvision.transforms.functional import to_pil_image
+from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
+try:
+    from torchvision.transforms import InterpolationMode
+    BICUBIC = InterpolationMode.BICUBIC
+except ImportError:
+    BICUBIC = Image.BICUBIC
 from tools.utils import *
 from tools.ops import compute_grad_gp, update_average, copy_norm_params, queue_data, dequeue_data, \
     average_gradients, calc_adv_loss, calc_contrastive_loss, calc_recon_loss, calc_style_norm, calc_variance, \
     calc_content_norm
+
+def my_transform(n_px=224):
+    return Compose([
+        Resize(n_px, interpolation=BICUBIC),
+        CenterCrop(n_px),
+        ToTensor(),
+        Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+    ])
+
+def preprocess_for_tensor(x):
+    return my_transform()(x)
+
+
+
+def trainGAN_with_CLIP(
+   style_data_loader,
+   content_data_loader,
+    networks,
+    clip_model_visual,
+    clip_preprocess,
+    opts,
+    epoch, 
+    args,
+    additional):
+
+    # avg meter
+    d_losses = AverageMeter()
+    d_advs = AverageMeter()
+    d_gps = AverageMeter()
+
+    g_losses = AverageMeter()
+    g_advs = AverageMeter()
+    g_imgrecs = AverageMeter()
+    g_rec = AverageMeter()
+
+    # set nets
+    D = networks['D']
+    G = networks['G']
+    G_EMA = networks['G_EMA']
+
+    # set opts
+    d_opt = opts['D']
+    g_opt = opts['G']
+
+    # switch to train mode
+    D.train()
+    G.train()
+    G_EMA.train()
+
+    logger = additional['logger']
+
+    # summary writer
+    style_train_it = iter(style_data_loader)
+    content_train_it = iter(content_data_loader)
+
+    t_train = trange(0, args.iters, initial=0, total=args.iters)
+
+    for i in t_train:
+        try:
+            embedded_image, style_for_discriminator, style_y = next(style_train_it)
+            if len(embedded_image) < args.batch_size:
+                style_train_it = iter(style_data_loader)
+                embedded_image, style_for_discriminator, style_y = next(style_train_it)
+        except BaseException:
+            style_train_it = iter(style_data_loader)
+            embedded_image, style_for_discriminator, style_y = next(style_train_it)
+
+        try:
+            contents, content_y, cnt_cnt_idx = next(content_train_it)
+            if len(contents) < args.batch_size:
+                content_train_it = iter(content_data_loader)
+                contents, content_y, cnt_cnt_idx = next(content_train_it)
+        except BaseException:
+            content_train_it = iter(content_data_loader)
+            contents, content_y, cnt_cnt_idx = next(content_train_it)
+
+        # imgs.shape is [batch_size, input_ch, img_size, img_size]
+        # y_org is [class_idx, class_idx, ..., class_idx] and the length is
+        # batch_size
+
+        x_org = contents
+        y_org = content_y
+        x_org_image = [to_pil_image(x) for x in x_org]
+        x_org_image_tensor = torch.stack([clip_preprocess(x) for x in x_org_image]).to(args.device)
+
+        x_org = x_org.to(args.device)
+        y_org = y_org.to(args.device)
+
+        x_ref = embedded_image
+        y_ref = style_y
+        x_ref = x_ref.to(args.device)
+        y_ref = y_ref.to(args.device)
+        style_for_discriminator = style_for_discriminator.to(args.device)
+
+        training_mode = 'GAN'
+
+        ####################
+        # BEGIN Train GANs #
+        ####################
+        with torch.no_grad():
+            # style
+            s_ref = x_ref
+
+            # content
+            c_src, skip1, skip2 = G.cnt_encoder(x_org)
+
+            x_fake, _ = G.decode(c_src, s_ref, skip1, skip2)
+
+        # - x: images of shape (batch, 3, image_size, image_size).
+        # - y: domain indices of shape (batch).
+        d_real_logit, _ = D(style_for_discriminator, y_ref)
+        d_fake_logit, _ = D(x_fake.detach(), y_ref)
+
+        d_adv_real = calc_adv_loss(d_real_logit, 'd_real')
+        d_adv_fake = calc_adv_loss(d_fake_logit, 'd_fake')
+
+        d_adv = d_adv_real + d_adv_fake
+
+        d_gp = 0
+        # d_gp = args.w_gp * compute_grad_gp(d_real_logit, x_ref, is_patch=False)
+
+        d_loss = d_adv + d_gp
+
+        d_opt.zero_grad()
+        d_adv_real.backward(retain_graph=True)
+        # d_gp.backward()
+        d_adv_fake.backward()
+        # if args.distributed:
+        #     average_gradients(D)
+        d_opt.step()
+
+        # Train G
+        s_src = clip_model_visual(x_org_image_tensor.to(torch.float16))
+        s_src = s_src.to(torch.float32)
+        c_src, skip1, skip2 = G.cnt_encoder(x_org)
+        x_fake, offset_loss = G.decode(c_src, s_ref, skip1, skip2)
+        x_fake_image = [to_pil_image(x) for x in x_org]
+        x_fake_image_tensor = torch.stack([clip_preprocess(x) for x in x_fake_image]).to(args.device)
+        x_rec, _ = G.decode(c_src, s_src, skip1, skip2)
+
+        g_fake_logit, _ = D(x_fake, y_ref)
+        g_rec_logit, _ = D(x_rec, y_org)
+
+        g_adv_fake = calc_adv_loss(g_fake_logit, 'g')
+        g_adv_rec = calc_adv_loss(g_rec_logit, 'g')
+
+        g_adv = g_adv_fake + 0.01 * g_adv_rec
+
+        g_imgrec = calc_recon_loss(x_rec, x_org)
+
+        c_x_fake, _, _ = G.cnt_encoder(x_fake)
+        g_conrec = calc_recon_loss(c_x_fake, c_src)
+
+        style_x_fake = clip_model_visual(x_fake_image_tensor.to(torch.float16))
+        style_x_fake = style_x_fake.to(torch.float32)
+        g_styrec = calc_recon_loss(style_x_fake, s_ref)
+
+        g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + args.w_rec * \
+            g_conrec + args.w_off * offset_loss + args.w_rec * g_styrec
+
+        g_opt.zero_grad()
+        g_loss.backward()
+
+        g_opt.step()
+
+        ##################
+        # END Train GANs #
+        ##################
+
+        if epoch >= args.ema_start:
+            training_mode = training_mode + "_EMA"
+            update_average(G_EMA, G)
+
+        torch.cuda.synchronize()
+
+        with torch.no_grad():
+            if epoch >= args.separated:
+                d_losses.update(d_loss.item(), x_org.size(0))
+                d_advs.update(d_adv.item(), x_org.size(0))
+                # d_gps.update(d_gp.item(), x_org.size(0))
+
+                g_losses.update(g_loss.item(), x_org.size(0))
+                g_advs.update(g_adv.item(), x_org.size(0))
+                g_imgrecs.update(g_imgrec.item(), x_org.size(0))
+                g_rec.update(g_conrec.item(), x_org.size(0))
+
+            if (i + 1) % args.log_step == 0 and (args.gpu == 0 or args.gpu == '0'):
+                summary_step = epoch * args.iters + i
+                add_logs(args, logger, 'D/LOSS', d_losses.avg, summary_step)
+                add_logs(args, logger, 'D/ADV', d_advs.avg, summary_step)
+                # add_logs(args, logger, 'D/GP', d_gps.avg, summary_step)
+
+                add_logs(args, logger, 'G/LOSS', g_losses.avg, summary_step)
+                add_logs(args, logger, 'G/ADV', g_advs.avg, summary_step)
+                add_logs(args, logger, 'G/IMGREC', g_imgrecs.avg, summary_step)
+                add_logs(args, logger, 'G/conrec', g_rec.avg, summary_step)
+
+                print('Epoch: [{}/{}] [{}/{}] MODE[{}] Avg Loss: D[{d_losses.avg:.2f}] G[{g_losses.avg:.2f}] '.format(
+                    epoch + 1, args.epochs, i + 1, args.iters, training_mode, d_losses=d_losses, g_losses=g_losses))
+
+    copy_norm_params(G_EMA, G)
 
 
 def trainGAN(data_loader, networks, opts, epoch, args, additional):
@@ -74,7 +283,6 @@ def trainGAN(data_loader, networks, opts, epoch, args, additional):
 
         x_org = x_org.to(args.device)
         y_org = y_org.to(args.device)
-        x_ref_idx = x_ref_idx.to(args.device)
 
         # x_ref はx_orgをランダムに入れ替えたもの
         # x_ref is characters with the target font

@@ -2,7 +2,7 @@ import torch
 from torchvision.datasets import ImageFolder
 import os
 import torchvision.transforms as transforms
-from datasets.custom_dataset import ImageFolderRemap, CrossdomainFolder, DatasetImages, ImageFolderRemapStyleAttraction
+from datasets.custom_dataset import ImageFolderRemap, CrossdomainFolder, DatasetImages, ImageFolderRemapStyleAttraction, DatasetForCLIPEmbeddedImage
 
 
 class Compose(object):
@@ -14,6 +14,25 @@ class Compose(object):
             img = t(img)
         return img
 
+def get_dataset_for_clip_embedded_image(args, root, root_for_characters, clip_model, clip_preprocess):
+    if args.input_ch == 1:
+        mean = [0.5]
+        std = [0.5]
+    else:
+        mean = [0.5, 0.5, 0.5]
+        std = [0.5, 0.5, 0.5]
+
+    normalize = transforms.Normalize(mean=mean, std=std)
+
+    if args.without_normalization:
+        transform = Compose([transforms.Resize((args.img_size, args.img_size)),
+                             transforms.ToTensor()])
+    else:
+        transform = Compose([transforms.Resize((args.img_size, args.img_size)),
+                             transforms.ToTensor(),
+                             normalize])
+    dataset = DatasetForCLIPEmbeddedImage(root, root_for_characters, clip_model, clip_preprocess, transform=transform, input_ch=args.input_ch)
+    return dataset
 
 def get_dataset(args):
 

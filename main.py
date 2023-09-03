@@ -18,14 +18,34 @@ from models.generator import Generator as Generator
 from models.discriminator import Discriminator as Discriminator
 from models.guidingNet import GuidingNet
 
-from train.train import trainGAN, train_fixed_content, train_fixed_content_with_style_attraction
+from train.train import trainGAN, train_fixed_content, train_fixed_content_with_style_attraction, trainGAN_with_CLIP
 
 from validation.validation import validateUN, infer, infer_styles, infer_from_style, evaluate_style, top_average_evaluate, make_loss_dictionary
 
 from tools.utils import *
-from datasets.datasetgetter import get_dataset, get_dataset_for_inference
+from datasets.datasetgetter import get_dataset, get_dataset_for_inference, get_dataset_for_clip_embedded_image
 
 from tensorboardX import SummaryWriter
+
+from clipfont import clip
+
+def clip_load_model(
+    model,
+    checkpoint_path=None,
+    requires_grad=False,
+    device='cuda',
+    model_name='ViT-B/32',
+):
+    if checkpoint_path is None:
+        model, _ = clip.load(model_name, device=device, jit=False)
+    else:
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+
+    if not requires_grad:
+        for param in model.parameters():
+            param.requires_grad = False
+    return model
 
 
 def main():
@@ -131,6 +151,14 @@ def main():
              'ex) --check_point_path model_3.ckpt')
     parser.add_argument('--validation', dest='validation', action='store_true',
                         help='Call for valiation only mode')
+    parser.add_argument('--use_clip_vision_encoder', action='store_true',
+                        help='Use clip vision encoder instead of MOCO')
+    parser.add_argument('--clip_model_name', default='ViT-B/32', type=str,)
+    parser.add_argument(
+        '--image_base_path_for_clip_vision_encoder',
+        default='../grayscale_images_200',
+        type=str)
+    parser.add_argument('--clip_model_checkpoint_path', default=None, type=str,)
     parser.add_argument('--fixed_content_font', action='store_true',
                         help='Call for inference only mode')
     parser.add_argument('--style_norm', action='store_true',
@@ -334,6 +362,10 @@ def main_worker(args):
     else:
         print("Use CPU: {} for training".format(args.device))
 
+    # Load CLIP
+    clip_model, clip_preprocess = clip.load(args.clip_model_name, device=args.device)
+    clip_model = clip_load_model(clip_model, args.clip_model_checkpoint_path, requires_grad=False, device=args.device, model_name=args.clip_model_name)
+
     # # of GT-classes
     args.num_cls = args.output_k
 
@@ -385,6 +417,21 @@ def main_worker(args):
     # get dataset and data loader
     train_dataset, content_dataset = get_dataset(args)
 
+    clip_vision_dataset = None
+    clip_vision_loader = None
+    if args.use_clip_vision_encoder:
+        clip_vision_dataset = get_dataset_for_clip_embedded_image(args, args.image_base_path_for_clip_vision_encoder, args.data_dir, clip_model, clip_preprocess)
+        clip_vision_loader = torch.utils.data.DataLoader(
+            clip_vision_dataset,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=args.workers,
+            pin_memory=True,
+            sampler=None,
+            drop_last=False)
+
+    clip_model = clip_model.to('cpu')
+
     args.shuffle = True
     # if args.style_norm:
     #     args.shuffle = False
@@ -422,9 +469,11 @@ def main_worker(args):
         if epoch == args.ema_start and 'GAN' in args.train_mode:
             networks['G_EMA'].load_state_dict(networks['G'].state_dict())
 
-        if args.fixed_content_font:
+        if args.use_clip_vision_encoder:
+            clip_model_visual = clip_model.visual.to(args.device)
+            trainGAN_with_CLIP(clip_vision_loader, train_loader, networks, clip_model_visual, clip_preprocess, opts, epoch, args, {'logger': logger})
+        elif args.fixed_content_font:
             assert content_loader is not None
-
             if args.style_attraction:
                 train_fixed_content_with_style_attraction(
                     train_loader, content_loader, networks, opts, epoch, args, {
@@ -455,6 +504,8 @@ def print_args(args):
 
 def build_model(args):
     args.to_train = 'CDG'
+    if args.use_clip_vision_encoder:
+        args.to_train = 'DG'
 
     networks = {}
     opts = {}

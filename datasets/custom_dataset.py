@@ -8,6 +8,14 @@ import sys
 from io import BytesIO
 import pickle
 import torch
+import numpy as np
+
+def default_loader(path, input_ch=3):
+    from torchvision import get_image_backend
+    if get_image_backend() == 'accimage':
+        return accimage_loader(path, input_ch=3)
+    else:
+        return pil_loader(path, input_ch)
 
 
 def has_file_allowed_extension(filename, extensions):
@@ -68,6 +76,84 @@ def make_dataset(dir, class_to_idx, extensions):
 
     return images
 
+def find_classes(dir, is_dir=True):
+    """
+    Finds the class folders in a dataset.
+
+    Args:
+        dir (string): Root directory path.
+
+    Returns:
+        tuple: (classes, class_to_idx) where classes are relative to (dir), and class_to_idx is a dictionary.
+
+    Ensures:
+        No class is a subdirectory of another.
+    """
+    if sys.version_info >= (3, 5):
+        # Faster and available in Python 3.5 and above
+        if is_dir:
+            classes = [d.name for d in os.scandir(dir) if d.is_dir()]
+        else:
+            classes = [os.path.splitext(d.name)[0] for d in os.scandir(dir)]
+    else:
+        classes = [
+            d for d in os.listdir(dir) if os.path.isdir(
+                os.path.join(
+                    dir, d))]
+    classes.sort()
+    classes.sort(key=lambda x: int(x[3:])) # remove 'id_' and sort by number
+
+    # the key is dir name and the value is index.
+    # {'id_0': 0, 'id_1': 1, ..., }
+    class_to_idx = {classes[i]: i for i in range(len(classes))}
+    return classes, class_to_idx
+
+class DatasetForCLIPEmbeddedImage(data.Dataset):
+    def __init__(self, root, root_for_characters, clip_model, clip_preprocess, loader=default_loader, transform=None, input_ch=3, sampling_num=26):
+        self.loader = loader
+        self.transform = transform
+        self.input_ch = input_ch
+        self.sampling_num = sampling_num
+        # class_to_idx: the key is dir name and the value is index.
+        # {'id_0': 0, 'id_1': 1, ..., }
+        self.classes, self.class_to_idx = find_classes(root, is_dir=False)
+        self.embedded_images = {}
+
+        with torch.no_grad():
+            for class_name in self.classes:
+                # class_name is 'id_0', 'id_1', ...
+                image_file_path = os.path.join(root, class_name + '.png')
+                image = Image.open(image_file_path)
+                image = clip_preprocess(image).unsqueeze(0).to('cuda')
+                embedded_image = clip_model.encode_image(image)
+                embedded_image = embedded_image.cpu().detach().to(torch.float32)
+                self.embedded_images[class_name] = embedded_image
+
+        self.class_to_images = {}
+        for class_name in self.classes:
+            tmp_base_path = os.path.join(root_for_characters, class_name)
+            file_paths = [os.path.join(tmp_base_path, file_name) for file_name in os.listdir(tmp_base_path)]
+            # sample 10 files randomly
+            files_paths = np.random.choice(file_paths, self.sampling_num, replace=False)
+            tmp_images = []
+            for file_path in files_paths:
+                image = self.loader(file_path, self.input_ch)
+                if self.transform is not None:
+                    image = self.transform(image)
+                tmp_images.append(image)
+            self.class_to_images[class_name] = tmp_images
+
+
+        print('Finish embedding images')
+        
+    def __len__(self):
+        return len(self.classes)
+    
+    def __getitem__(self, index):
+        class_name = self.classes[index]
+        embedded_image = self.embedded_images[class_name]
+        return embedded_image, self.class_to_images[class_name][np.random.randint(self.sampling_num)], self.class_to_idx[class_name]
+        
 
 class DatasetFolder(data.Dataset):
     """A generic data loader where the samples are arranged in this way: ::
@@ -107,7 +193,7 @@ class DatasetFolder(data.Dataset):
 
         # class_to_idx: the key is dir name and the value is index.
         # {'id_0': 0, 'id_1': 1, ..., }
-        classes, class_to_idx = self._find_classes(root)
+        classes, class_to_idx = find_classes(root)
 
         # The type of samples: [(img_path, class_idx), (img_path,
         # class_idx),...]
@@ -228,12 +314,6 @@ def accimage_loader(path, input_ch=3):
         return pil_loader(path, input_ch)
 
 
-def default_loader(path, input_ch=3):
-    from torchvision import get_image_backend
-    if get_image_backend() == 'accimage':
-        return accimage_loader(path, input_ch=3)
-    else:
-        return pil_loader(path, input_ch)
 
 
 class PickledImageProvider(object):
@@ -409,6 +489,8 @@ class ImageFolderRemapStyleAttraction(DatasetFolder):
             transform=transform,
             target_transform=target_transform)
 
+        # __getitem__では同じフォントの画像をbatch_size分取得する (style_attractionを計算するには同じフォントの画像が必要)
+
         # self.samplesはDatasetFolderのinit関数で定義される
         # self.samples = make_dataset(root, class_to_idx, extensions)
         # self.samplesは[(img_path, class_idx), (img_path, class_idx),...]の形式
@@ -440,6 +522,7 @@ class ImageFolderRemapStyleAttraction(DatasetFolder):
             if font_id is None:
                 font_id = target
             elif font_id != target:
+                # batch_size分のデータを取得する前に、フォントが変わったら、残りの分を敷き詰めてループを抜ける
                 for j in range(i, self.batch_size):
                     samples.append(sample)
                     targets.append(target)
