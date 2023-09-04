@@ -17,7 +17,7 @@ from torchvision.utils import make_grid
 from models.generator import Generator as Generator
 from models.discriminator import Discriminator as Discriminator
 from models.guidingNet import GuidingNet
-from models.blocks import LinearBlock
+from models.blocks import LinearBlock, LinearBlockMultipleLayers
 
 from train.train import trainGAN, train_fixed_content, train_fixed_content_with_style_attraction, trainGAN_with_CLIP
 
@@ -553,7 +553,7 @@ def build_model(args):
             input_ch=args.input_ch,
             output_ch=args.input_ch)
     if 'L' in args.to_train:
-        networks['L'] = LinearBlock(
+        networks['L'] = LinearBlockMultipleLayers(
             512,
             args.sty_dim,
             norm='none',

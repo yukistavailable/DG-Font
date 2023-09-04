@@ -162,6 +162,8 @@ def trainGAN_with_CLIP(
         #     average_gradients(D)
         d_opt.step()
 
+        # torch.cuda.empty_cache()
+
         # Train G
         # s_src = clip_model_visual(x_org_image_tensor.to(torch.float16))
         # s_src = s_src.to(torch.float32)

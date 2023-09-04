@@ -105,6 +105,53 @@ class LinearBlock(nn.Module):
             out = self.activation(out)
         return out
 
+class LinearBlockMultipleLayers(nn.Module):
+    def __init__(self, in_dim, out_dim, norm='none', act='relu', use_sn=False):
+        super(LinearBlockMultipleLayers, self).__init__()
+        use_bias = True
+        self.fc1 = nn.Linear(in_dim, in_dim, bias=use_bias)
+        self.fc2 = nn.Linear(in_dim, out_dim, bias=use_bias)
+        if use_sn:
+            self.fc1 = nn.utils.spectral_norm(self.fc1)
+
+        # initialize normalization
+        norm_dim = out_dim
+        if norm == 'bn':
+            self.norm = nn.BatchNorm1d(norm_dim)
+        elif norm == 'in':
+            self.norm = nn.InstanceNorm1d(norm_dim)
+        elif norm == 'none':
+            self.norm = None
+        else:
+            assert 0, "Unsupported normalization: {}".format(norm)
+
+        # initialize activation
+        if act == 'relu':
+            self.activation = nn.ReLU(inplace=True)
+        elif act == 'lrelu':
+            self.activation = nn.LeakyReLU(0.2, inplace=True)
+        elif act == 'tanh':
+            self.activation = nn.Tanh()
+        elif act == 'none':
+            self.activation = None
+        else:
+            assert 0, "Unsupported activation: {}".format(act)
+
+    def forward(self, x):
+        out = self.fc1(x)
+        if self.norm:
+            out = self.norm(out)
+        if self.activation:
+            out = self.activation(out)
+
+        out = self.fc2(out)
+        if self.norm:
+            out = self.norm(out)
+        if self.activation:
+            out = self.activation(out)
+        return out
+
+
 
 class Conv2dBlock(nn.Module):
     def __init__(self, in_dim, out_dim, ks, st, padding=0,
