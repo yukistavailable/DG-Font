@@ -152,7 +152,12 @@ class DatasetForCLIPEmbeddedImage(data.Dataset):
     def __getitem__(self, index):
         class_name = self.classes[index]
         embedded_image = self.embedded_images[class_name]
-        return embedded_image, self.class_to_images[class_name][np.random.randint(self.sampling_num)], self.class_to_idx[class_name]
+        sampling_idx = np.random.randint(self.sampling_num)
+        try:
+            return embedded_image, self.class_to_images[class_name][sampling_idx], self.class_to_idx[class_name]
+        except:
+            print('Error: ', class_name, sampling_idx)
+            return embedded_image, self.class_to_images[class_name][0], self.class_to_idx[class_name]
         
 
 class DatasetFolder(data.Dataset):
