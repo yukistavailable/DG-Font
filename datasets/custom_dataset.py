@@ -134,9 +134,9 @@ class DatasetForCLIPEmbeddedImage(data.Dataset):
             tmp_base_path = os.path.join(root_for_characters, class_name)
             file_paths = [os.path.join(tmp_base_path, file_name) for file_name in os.listdir(tmp_base_path)]
             # sample 10 files randomly
-            files_paths = np.random.choice(file_paths, self.sampling_num, replace=False)
+            # file_paths = np.random.choice(file_paths, self.sampling_num, replace=False)
             tmp_images = []
-            for file_path in files_paths:
+            for file_path in file_paths:
                 image = self.loader(file_path, self.input_ch)
                 if self.transform is not None:
                     image = self.transform(image)

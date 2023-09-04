@@ -17,6 +17,7 @@ from torchvision.utils import make_grid
 from models.generator import Generator as Generator
 from models.discriminator import Discriminator as Discriminator
 from models.guidingNet import GuidingNet
+from models.blocks import LinearBlock
 
 from train.train import trainGAN, train_fixed_content, train_fixed_content_with_style_attraction, trainGAN_with_CLIP
 
@@ -153,6 +154,8 @@ def main():
                         help='Call for valiation only mode')
     parser.add_argument('--use_clip_vision_encoder', action='store_true',
                         help='Use clip vision encoder instead of MOCO')
+    parser.add_argument('--use_linear_block', action='store_true',
+                        help='User linear block to map clip embedding to style vector')
     parser.add_argument('--clip_model_name', default='ViT-B/32', type=str,)
     parser.add_argument(
         '--image_base_path_for_clip_vision_encoder',
@@ -419,6 +422,8 @@ def main_worker(args):
 
     clip_vision_dataset = None
     clip_vision_loader = None
+    clip_content_dataset = None
+    clip_content_loader = None
     if args.use_clip_vision_encoder:
         clip_vision_dataset = get_dataset_for_clip_embedded_image(args, args.image_base_path_for_clip_vision_encoder, args.data_dir, clip_model, clip_preprocess)
         clip_vision_loader = torch.utils.data.DataLoader(
@@ -470,8 +475,7 @@ def main_worker(args):
             networks['G_EMA'].load_state_dict(networks['G'].state_dict())
 
         if args.use_clip_vision_encoder:
-            clip_model_visual = clip_model.visual.to(args.device)
-            trainGAN_with_CLIP(clip_vision_loader, train_loader, networks, clip_model_visual, clip_preprocess, opts, epoch, args, {'logger': logger})
+            trainGAN_with_CLIP(clip_vision_loader, train_loader, networks, opts, epoch, args, {'logger': logger})
         elif args.fixed_content_font:
             assert content_loader is not None
             if args.style_attraction:
@@ -505,7 +509,10 @@ def print_args(args):
 def build_model(args):
     args.to_train = 'CDG'
     if args.use_clip_vision_encoder:
-        args.to_train = 'DG'
+        if args.use_linear_block:
+            args.to_train = 'DGL'
+        else:
+            args.to_train = 'DG'
 
     networks = {}
     opts = {}
@@ -545,6 +552,13 @@ def build_model(args):
             device=args.device,
             input_ch=args.input_ch,
             output_ch=args.input_ch)
+    if 'L' in args.to_train:
+        networks['L'] = LinearBlock(
+            512,
+            args.sty_dim,
+            norm='none',
+            act='relu',
+            use_sn=False)
 
     if args.device is not None:
         # torch.cuda.set_device(args.device)
@@ -570,6 +584,9 @@ def build_model(args):
     if 'G' in args.to_train:
         opts['G'] = torch.optim.RMSprop(
             networks['G'].parameters(), args.lr, weight_decay=0.0001)
+    if 'L' in args.to_train:
+        opts['L'] = torch.optim.Adam(
+            networks['L'].parameters(), args.lr, weight_decay=0.0001)
 
     return networks, opts
 

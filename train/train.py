@@ -34,8 +34,6 @@ def trainGAN_with_CLIP(
    style_data_loader,
    content_data_loader,
     networks,
-    clip_model_visual,
-    clip_preprocess,
     opts,
     epoch, 
     args,
@@ -65,11 +63,16 @@ def trainGAN_with_CLIP(
     G.train()
     G_EMA.train()
 
+    if args.use_linear_block:
+        L = networks['L']
+        l_opt = opts['L']
+        L.train()
+
     logger = additional['logger']
 
     # summary writer
     style_train_it = iter(style_data_loader)
-    content_train_it = iter(content_data_loader)
+    # content_train_it = iter(content_data_loader)
 
     t_train = trange(0, args.iters, initial=0, total=args.iters)
 
@@ -83,14 +86,23 @@ def trainGAN_with_CLIP(
             style_train_it = iter(style_data_loader)
             embedded_image, style_for_discriminator, style_y = next(style_train_it)
 
+        # try:
+        #     contents, content_y, cnt_cnt_idx = next(content_train_it)
+        #     if len(contents) < args.batch_size:
+        #         content_train_it = iter(content_data_loader)
+        #         contents, content_y, cnt_cnt_idx = next(content_train_it)
+        # except BaseException:
+        #     content_train_it = iter(content_data_loader)
+        #     contents, content_y, cnt_cnt_idx = next(content_train_it)
+
         try:
-            contents, content_y, cnt_cnt_idx = next(content_train_it)
-            if len(contents) < args.batch_size:
-                content_train_it = iter(content_data_loader)
-                contents, content_y, cnt_cnt_idx = next(content_train_it)
+            content_embedded_image, contents, content_y = next(style_train_it)
+            if len(content_embedded_image) < args.batch_size:
+                style_train_it = iter(style_data_loader)
+                content_embedded_image, contents, content_y = next(style_train_it)
         except BaseException:
-            content_train_it = iter(content_data_loader)
-            contents, content_y, cnt_cnt_idx = next(content_train_it)
+            style_train_it = iter(style_data_loader)
+            content_embedded_image, contents, content_y = next(style_train_it)
 
         # imgs.shape is [batch_size, input_ch, img_size, img_size]
         # y_org is [class_idx, class_idx, ..., class_idx] and the length is
@@ -98,15 +110,18 @@ def trainGAN_with_CLIP(
 
         x_org = contents
         y_org = content_y
-        x_org_image = [to_pil_image(x) for x in x_org]
-        x_org_image_tensor = torch.stack([clip_preprocess(x) for x in x_org_image]).to(args.device)
+        # x_org_image = [to_pil_image(x) for x in x_org]
+        # x_org_image_tensor = torch.stack([clip_preprocess(x) for x in x_org_image]).to(args.device)
 
         x_org = x_org.to(args.device)
         y_org = y_org.to(args.device)
 
-        x_ref = embedded_image
+        embedded_image = embedded_image.to(args.device)
+        if args.use_linear_block:
+            x_ref = L(embedded_image)
+        else:
+            x_ref = embedded_image
         y_ref = style_y
-        x_ref = x_ref.to(args.device)
         y_ref = y_ref.to(args.device)
         style_for_discriminator = style_for_discriminator.to(args.device)
 
@@ -148,12 +163,18 @@ def trainGAN_with_CLIP(
         d_opt.step()
 
         # Train G
-        s_src = clip_model_visual(x_org_image_tensor.to(torch.float16))
-        s_src = s_src.to(torch.float32)
+        # s_src = clip_model_visual(x_org_image_tensor.to(torch.float16))
+        # s_src = s_src.to(torch.float32)
+        content_embedded_image = content_embedded_image.to(args.device)
+        if args.use_linear_block:
+            s_src = L(content_embedded_image)
+        else:
+            s_src = content_embedded_image
+
         c_src, skip1, skip2 = G.cnt_encoder(x_org)
         x_fake, offset_loss = G.decode(c_src, s_ref, skip1, skip2)
-        x_fake_image = [to_pil_image(x) for x in x_org]
-        x_fake_image_tensor = torch.stack([clip_preprocess(x) for x in x_fake_image]).to(args.device)
+        # x_fake_image = [to_pil_image(x) for x in x_fake]
+        # x_fake_image_tensor = torch.stack([clip_preprocess(x) for x in x_fake_image]).to(args.device)
         x_rec, _ = G.decode(c_src, s_src, skip1, skip2)
 
         g_fake_logit, _ = D(x_fake, y_ref)
@@ -162,24 +183,28 @@ def trainGAN_with_CLIP(
         g_adv_fake = calc_adv_loss(g_fake_logit, 'g')
         g_adv_rec = calc_adv_loss(g_rec_logit, 'g')
 
-        g_adv = g_adv_fake + 0.01 * g_adv_rec
+        g_adv = g_adv_fake + g_adv_rec
 
         g_imgrec = calc_recon_loss(x_rec, x_org)
 
         c_x_fake, _, _ = G.cnt_encoder(x_fake)
         g_conrec = calc_recon_loss(c_x_fake, c_src)
 
-        style_x_fake = clip_model_visual(x_fake_image_tensor.to(torch.float16))
-        style_x_fake = style_x_fake.to(torch.float32)
-        g_styrec = calc_recon_loss(style_x_fake, s_ref)
+        # style_x_fake = clip_model_visual(x_fake_image_tensor.to(torch.float16))
+        # style_x_fake = style_x_fake.to(torch.float32)
+        # g_styrec = calc_recon_loss(style_x_fake, s_ref)
 
         g_loss = args.w_adv * g_adv + args.w_rec * g_imgrec + args.w_rec * \
-            g_conrec + args.w_off * offset_loss + args.w_rec * g_styrec
+            g_conrec + args.w_off * offset_loss
 
         g_opt.zero_grad()
+        if args.use_linear_block:
+            l_opt.zero_grad()
         g_loss.backward()
 
         g_opt.step()
+        if args.use_linear_block:
+            l_opt.step()
 
         ##################
         # END Train GANs #
